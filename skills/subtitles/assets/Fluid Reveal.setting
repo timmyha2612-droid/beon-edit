@@ -1,0 +1,218 @@
+{
+	Tools = ordered() {
+		FluidReveal = GroupOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				TextContent = InstanceInput { SourceOp = "Fol", Source = "Text", Name = "Text", Page = "Controls" },
+				Font = InstanceInput { SourceOp = "Txt", Source = "Font", ControlGroup = 2 },
+				Style = InstanceInput { SourceOp = "Txt", Source = "Style", ControlGroup = 2 },
+				Red = InstanceInput { SourceOp = "Txt", Source = "Red1", Name = "Color", ControlGroup = 3, Default = 1 },
+				Green = InstanceInput { SourceOp = "Txt", Source = "Green1", ControlGroup = 3, Default = 1 },
+				Blue = InstanceInput { SourceOp = "Txt", Source = "Blue1", ControlGroup = 3, Default = 1 },
+				Alpha = InstanceInput { SourceOp = "Txt", Source = "Alpha1", ControlGroup = 3, Default = 1 },
+				Size = InstanceInput { SourceOp = "Txt", Source = "Size", Default = 0.08, MinScale = 0.01, MaxScale = 0.3 },
+				Tracking = InstanceInput { SourceOp = "Txt", Source = "CharacterSpacing", Name = "Tracking", Default = 0.98, MinScale = 0.8, MaxScale = 1.4 },
+				LineSpacing = InstanceInput { SourceOp = "Txt", Source = "LineSpacing", Name = "Line Spacing", Default = 0.95, MinScale = 0.5, MaxScale = 2 },
+				Position = InstanceInput { SourceOp = "Txt", Source = "Center", Name = "Position" },
+				JustifyL = InstanceInput { SourceOp = "Txt", Source = "HorizontalLeftCenterRight", Name = "Justify", Default = 0 },
+				InDur = InstanceInput { SourceOp = "Fol", Source = "InDur", Default = 18 },
+				Stagger = InstanceInput { SourceOp = "Fol", Source = "Delay", Name = "Stagger (frames / letter)", Default = 0.6, MinScale = 0, MaxScale = 6 },
+				Order = InstanceInput { SourceOp = "Fol", Source = "Order" },
+				InCurve = InstanceInput { SourceOp = "InCurve", Source = "Curve", Name = "In Curve" },
+				InEaseIn = InstanceInput { SourceOp = "InCurve", Source = "EaseIn", Width = 0.5 },
+				InEaseOut = InstanceInput { SourceOp = "InCurve", Source = "EaseOut", Width = 0.5 },
+				InLookup = InstanceInput { SourceOp = "InCurve", Source = "Lookup", Name = "In Custom Curve", ControlGroup = 40 },
+				Rise = InstanceInput { SourceOp = "Fol", Source = "Rise", Default = 0.35 },
+				InBlur = InstanceInput { SourceOp = "Fol", Source = "InBlur", Default = 6 },
+				InScale = InstanceInput { SourceOp = "Fol", Source = "InScale", Default = 0.96 },
+				OutDur = InstanceInput { SourceOp = "Fol", Source = "OutDur", Default = 12 },
+				OutCurve = InstanceInput { SourceOp = "OutCurve", Source = "Curve", Name = "Out Curve" },
+				OutEaseIn = InstanceInput { SourceOp = "OutCurve", Source = "EaseIn", Width = 0.5 },
+				OutEaseOut = InstanceInput { SourceOp = "OutCurve", Source = "EaseOut", Width = 0.5 },
+				OutLookup = InstanceInput { SourceOp = "OutCurve", Source = "Lookup", Name = "Out Custom Curve", ControlGroup = 41 },
+				OutLift = InstanceInput { SourceOp = "Fol", Source = "OutLift", Default = 0.015 },
+				OutBlur = InstanceInput { SourceOp = "Fol", Source = "OutBlur", Default = 12 },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "OutMerge", Source = "Output" },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				InCurveLookup = LUTBezier {
+					KeyColorSplines = {
+						[0] = {
+							[0] = { 0, RH = { 0.275, 0.325 } },
+							[1] = { 1, LH = { 0.175, 1 } }
+						}
+					},
+					SplineColor = { Red = 255, Green = 255, Blue = 255 },
+				},
+				InCurve = LUTLookup {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Source = Input { Value = FuID { "Custom" }, },
+						Input = Input { Value = 0, Expression = "min(max(time/max(Fol.InDur,1),0),1)", },
+						Curve = Input { Value = FuID { "Custom" }, },
+						EaseIn = Input { Value = FuID { "Sine" }, },
+						EaseOut = Input { Value = FuID { "Sine" }, },
+						Lookup = Input { SourceOp = "InCurveLookup", Source = "Value", },
+					},
+				},
+				EaseOpacity = Expression {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						n1 = Input { SourceOp = "InCurve", Source = "Value", },
+						n2 = Input { Value = 0.35, Expression = "Fol.Rise", },
+						NumberExpression = Input { Value = "min(max(n1,0),1)", },
+						PointExpressionX = Input { Value = "0", },
+						PointExpressionY = Input { Value = "-n2*(1-n1)", },
+					},
+				},
+				EaseBlur = Expression {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						n1 = Input { SourceOp = "InCurve", Source = "Value", },
+						n2 = Input { Value = 6, Expression = "Fol.InBlur", },
+						NumberExpression = Input { Value = "max(0,n2*(1-n1))", },
+						PointExpressionX = Input { Value = "0", },
+						PointExpressionY = Input { Value = "0", },
+					},
+				},
+				EaseScale = Expression {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						n1 = Input { SourceOp = "InCurve", Source = "Value", },
+						n2 = Input { Value = 0.96, Expression = "Fol.InScale", },
+						NumberExpression = Input { Value = "n2+(1-n2)*n1", },
+						PointExpressionX = Input { Value = "0", },
+						PointExpressionY = Input { Value = "0", },
+					},
+				},
+				Fol = StyledTextFollower {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Text = Input {
+							Value = StyledText { Array = { }, Value = "Type your title" },
+						},
+						Delay = Input { Value = 0.6, },
+						Transform1 = Input { Value = 1, },
+						InDur = Input { Value = 18, },
+						Rise = Input { Value = 0.35, },
+						InBlur = Input { Value = 6, },
+						InScale = Input { Value = 0.96, },
+						OutDur = Input { Value = 12, },
+						OutLift = Input { Value = 0.015, },
+						OutBlur = Input { Value = 12, },
+						Opacity1 = Input { SourceOp = "EaseOpacity", Source = "NumberResult", },
+						Offset1 = Input { SourceOp = "EaseOpacity", Source = "PointResult", },
+						SoftnessX1 = Input { SourceOp = "EaseBlur", Source = "NumberResult", },
+						SoftnessY1 = Input { SourceOp = "EaseBlur", Source = "NumberResult", },
+						SizeX1 = Input { SourceOp = "EaseScale", Source = "NumberResult", },
+						SizeY1 = Input { SourceOp = "EaseScale", Source = "NumberResult", },
+					},
+					UserControls = ordered() {
+						InDur = { LINKS_Name = "In Duration (frames)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = 18, INP_MinScale = 1, INP_MaxScale = 60, INP_MinAllowed = 1, ICS_ControlPage = "Controls" },
+						Rise = { LINKS_Name = "Rise Distance", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = 0.35, INP_MinScale = 0, INP_MaxScale = 1.5, ICS_ControlPage = "Controls" },
+						InBlur = { LINKS_Name = "In Blur", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = 6, INP_MinScale = 0, INP_MaxScale = 30, INP_MinAllowed = 0, ICS_ControlPage = "Controls" },
+						InScale = { LINKS_Name = "In Scale From", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = 0.96, INP_MinScale = 0.5, INP_MaxScale = 1.2, ICS_ControlPage = "Controls" },
+						OutDur = { LINKS_Name = "Out Duration (frames)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = 12, INP_MinScale = 0, INP_MaxScale = 60, INP_MinAllowed = 0, ICS_ControlPage = "Controls" },
+						OutLift = { LINKS_Name = "Out Lift", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = 0.015, INP_MinScale = 0, INP_MaxScale = 0.1, ICS_ControlPage = "Controls" },
+						OutBlur = { LINKS_Name = "Out Blur", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = 12, INP_MinScale = 0, INP_MaxScale = 40, INP_MinAllowed = 0, ICS_ControlPage = "Controls" },
+					},
+				},
+				Txt = TextPlus {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						GlobalOut = Input { Value = 20000, },
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						StyledText = Input { SourceOp = "Fol", Source = "StyledText", },
+						Font = Input { Value = "Helvetica Neue", },
+						Style = Input { Value = "Medium", },
+						Size = Input { Value = 0.08, },
+						CharacterSpacing = Input { Value = 0.98, },
+						LineSpacing = Input { Value = 0.95, },
+						VerticalJustificationNew = Input { Value = 3, },
+						HorizontalJustificationNew = Input { Value = 3, },
+						ManualFontKerningPlacement = Input {
+							Value = StyledText { Array = { }, Value = "" },
+						},
+					},
+				},
+				OutCurveLookup = LUTBezier {
+					KeyColorSplines = {
+						[0] = {
+							[0] = { 0, RH = { 0.4, 0 } },
+							[1] = { 1, LH = { 1, 1 } }
+						}
+					},
+					SplineColor = { Red = 255, Green = 255, Blue = 255 },
+				},
+				OutCurve = LUTLookup {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Source = Input { Value = FuID { "Custom" }, },
+						Input = Input { Value = 0, Expression = "min(max((time-(comp.RenderEnd+1-Fol.OutDur))/max(Fol.OutDur,1),0),1)", },
+						Curve = Input { Value = FuID { "Custom" }, },
+						EaseIn = Input { Value = FuID { "Sine" }, },
+						EaseOut = Input { Value = FuID { "Sine" }, },
+						Lookup = Input { SourceOp = "OutCurveLookup", Source = "Value", },
+					},
+				},
+				OutFx = Expression {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						n1 = Input { SourceOp = "OutCurve", Source = "Value", },
+						n2 = Input { Value = 0.015, Expression = "Fol.OutLift", },
+						NumberExpression = Input { Value = "1-min(max(n1,0),1)", },
+						PointExpressionX = Input { Value = "0.5", },
+						PointExpressionY = Input { Value = "0.5+n2*n1", },
+					},
+				},
+				OutBlurTool = Blur {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Filter = Input { Value = FuID { "Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "max(0, Fol.OutBlur*(1-OutMerge.Blend))", },
+						Input = Input { SourceOp = "Txt", Source = "Output", },
+					},
+				},
+				Clear = Background {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						GlobalOut = Input { Value = 20000, },
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftAlpha = Input { Value = 0, },
+					},
+				},
+				OutMerge = Merge {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Background = Input { SourceOp = "Clear", Source = "Output", },
+						Foreground = Input { SourceOp = "OutBlurTool", Source = "Output", },
+						Center = Input { SourceOp = "OutFx", Source = "PointResult", },
+						Blend = Input { SourceOp = "OutFx", Source = "NumberResult", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+				},
+			},
+		},
+	},
+	ActiveTool = "FluidReveal",
+}

@@ -20,6 +20,7 @@ How to work with Tim on any edit. Read this first, then load the skill for the s
 | 2 | aroll-cut | Story beats and the interview cut (the "meat") |
 | 3–5 | broll-qaqc | Picking, placing, measuring and fixing B-roll |
 | 6 | colour-grade | Grading with Tim's template and the scopes |
+| 7 | subtitles | Captions: style test with Tim first, then Fluid Reveal Words subs, resync after edits |
 | 7 | finish-pass | What Tim does at the end, and how to set the edit up for it |
 | 8 | learn-from-tim | After Tim finishes or asks to "learn": read his version, compare, ask why |
 

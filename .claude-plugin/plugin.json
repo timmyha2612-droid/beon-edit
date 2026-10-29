@@ -1,7 +1,7 @@
 {
   "name": "beon-edit",
-  "version": "0.4.0",
-  "description": "Tim's editing system for Beon Media concept videos in DaVinci Resolve: house rules, shot log, footage sort, A-roll cutting, B-roll QA/QC, colour grading, finishing and the learn-from-Tim loop.",
+  "version": "0.5.0",
+  "description": "Tim's editing system for Beon Media concept videos in DaVinci Resolve: house rules, shot log, footage sort, A-roll cutting, B-roll QA/QC, colour grading, subtitles (Fluid Reveal Words), finishing and the learn-from-Tim loop.",
   "author": {
     "name": "Tim (Beon Media)"
   },
@@ -10,6 +10,7 @@
     "video-editing",
     "b-roll",
     "colour-grading",
-    "real-estate"
+    "real-estate",
+    "subtitles"
   ]
 }

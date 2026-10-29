@@ -1,0 +1,742 @@
+{
+	Tools = ordered() {
+		FluidRevealWords = GroupOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				TextContent = InstanceInput { SourceOp = "Txt1", Source = "StyledText", Name = "Text", Page = "Controls" },
+				Font = InstanceInput { SourceOp = "Txt1", Source = "Font", ControlGroup = 2 },
+				Style = InstanceInput { SourceOp = "Txt1", Source = "Style", ControlGroup = 2 },
+				Red = InstanceInput { SourceOp = "Txt1", Source = "Red1", Name = "Color", ControlGroup = 3, Default = 1 },
+				Green = InstanceInput { SourceOp = "Txt1", Source = "Green1", ControlGroup = 3, Default = 1 },
+				Blue = InstanceInput { SourceOp = "Txt1", Source = "Blue1", ControlGroup = 3, Default = 1 },
+				Alpha = InstanceInput { SourceOp = "Txt1", Source = "Alpha1", ControlGroup = 3, Default = 1 },
+				Size = InstanceInput { SourceOp = "Txt1", Source = "Size", Default = 0.08, MinScale = 0.01, MaxScale = 0.3 },
+				Tracking = InstanceInput { SourceOp = "Txt1", Source = "CharacterSpacing", Name = "Tracking", Default = 0.98, MinScale = 0.8, MaxScale = 1.4 },
+				LineSpacing = InstanceInput { SourceOp = "Txt1", Source = "LineSpacing", Name = "Line Spacing", Default = 0.95, MinScale = 0.5, MaxScale = 2 },
+				Position = InstanceInput { SourceOp = "Txt1", Source = "Center", Name = "Position" },
+				JustifyL = InstanceInput { SourceOp = "Txt1", Source = "HorizontalLeftCenterRight", Name = "Justify", Default = 0 },
+				InDur = InstanceInput { SourceOp = "Main", Source = "InDur", Default = 18 },
+				WordStagger = InstanceInput { SourceOp = "Main", Source = "WordStagger", Default = 4 },
+				SyncOffset = InstanceInput { SourceOp = "Main", Source = "SyncOffset", Default = -2 },
+				InCurve = InstanceInput { SourceOp = "InCurve1", Source = "Curve", Name = "In Curve" },
+				InEaseIn = InstanceInput { SourceOp = "InCurve1", Source = "EaseIn", Width = 0.5 },
+				InEaseOut = InstanceInput { SourceOp = "InCurve1", Source = "EaseOut", Width = 0.5 },
+				InLookup = InstanceInput { SourceOp = "InCurve1", Source = "Lookup", Name = "In Custom Curve", ControlGroup = 40 },
+				Rise = InstanceInput { SourceOp = "Main", Source = "Rise", Default = 0.02 },
+				InBlur = InstanceInput { SourceOp = "Main", Source = "InBlur", Default = 10 },
+				OutDur = InstanceInput { SourceOp = "Main", Source = "OutDur", Default = 12 },
+				OutCurve = InstanceInput { SourceOp = "OutCurve", Source = "Curve", Name = "Out Curve" },
+				OutEaseIn = InstanceInput { SourceOp = "OutCurve", Source = "EaseIn", Width = 0.5 },
+				OutEaseOut = InstanceInput { SourceOp = "OutCurve", Source = "EaseOut", Width = 0.5 },
+				OutLookup = InstanceInput { SourceOp = "OutCurve", Source = "Lookup", Name = "Out Custom Curve", ControlGroup = 41 },
+				OutLift = InstanceInput { SourceOp = "Main", Source = "OutLift", Default = 0.015 },
+				OutBlur = InstanceInput { SourceOp = "Main", Source = "OutBlur", Default = 12 },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "OutMerge", Source = "Output" },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				InCurveLookup = LUTBezier {
+					KeyColorSplines = {
+						[0] = {
+							[0] = { 0, RH = { 0.213646252453327, 0.252491025626659 } },
+							[0.571506936300528] = { 0.910587139749722, LH = { 0.20095504447351, 0.716230347657587 }, RH = { 0.677919976375094, 0.96640144690031 } },
+							[1] = { 1, LH = { 0.815938757359981, 1 } }
+						}
+					},
+					SplineColor = { Red = 255, Green = 255, Blue = 255 },
+				},
+				InCurve1 = LUTLookup {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Source = Input { Value = FuID { "Custom" }, },
+						Input = Input { Value = 0, Expression = "min(max((time-((Main.WordTime1 >= 0 and Main.WordTime1 or 0*Main.WordStagger)+Main.SyncOffset))/max(Main.InDur,1),0),1)", },
+						Curve = Input { Value = FuID { "Custom" }, },
+						EaseIn = Input { Value = FuID { "Sine" }, },
+						EaseOut = Input { Value = FuID { "Sine" }, },
+						Lookup = Input { SourceOp = "InCurveLookup", Source = "Value", },
+					},
+				},
+				WordFx1 = Expression {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						n1 = Input { SourceOp = "InCurve1", Source = "Value", },
+						n2 = Input { Value = 0.02, Expression = "Main.Rise", },
+						NumberExpression = Input { Value = "min(max(n1,0),1)", },
+						PointExpressionX = Input { Value = "0.5", },
+						PointExpressionY = Input { Value = "0.5-n2*(1-n1)", },
+					},
+				},
+				Txt1 = TextPlus {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						GlobalOut = Input { Value = 20000, },
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						StyledText = Input { Value = "Search is changing.", },
+						Font = Input { Value = "Garet", },
+						Style = Input { Value = "Book", },
+						Size = Input { Value = 0.08, },
+						CharacterSpacing = Input { Value = 0.98, },
+						LineSpacing = Input { Value = 0.95, },
+						VerticalJustificationNew = Input { Value = 3, },
+						HorizontalJustificationNew = Input { Value = 3, },
+						Start = Input { Value = 0, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 0) .. '()%S+()')})[3] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 0) .. '()%S+()')})[3] or 1)-1), '[^\\128-\\191\\n]', ''))-0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+						End = Input { Value = 1, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 0) .. '()%S+()')})[4] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 0) .. '()%S+()')})[4] or 1)-1), '[^\\128-\\191]', ''))+0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+						ManualFontKerningPlacement = Input {
+							Value = StyledText { Array = { }, Value = "" },
+						},
+					},
+				},
+				WordBlur1 = Blur {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Filter = Input { Value = FuID { "Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "max(0, Main.InBlur*(1-WordMerge1.Blend))", },
+						Input = Input { SourceOp = "Txt1", Source = "Output", },
+					},
+				},
+				WordMerge1 = Merge {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Background = Input { SourceOp = "Clear", Source = "Output", },
+						Foreground = Input { SourceOp = "WordBlur1", Source = "Output", },
+						Center = Input { SourceOp = "WordFx1", Source = "PointResult", },
+						Blend = Input { SourceOp = "WordFx1", Source = "NumberResult", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+				},
+				InCurve2 = LUTLookup {
+					SourceOp = "InCurve1",
+					Inputs = {
+						SettingsNest = Input(),
+						Input = Input { Value = 0, Expression = "min(max((time-((Main.WordTime2 >= 0 and Main.WordTime2 or 1*Main.WordStagger)+Main.SyncOffset))/max(Main.InDur,1),0),1)", },
+					},
+				},
+				WordFx2 = Expression {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						n1 = Input { SourceOp = "InCurve2", Source = "Value", },
+						n2 = Input { Value = 0.02, Expression = "Main.Rise", },
+						NumberExpression = Input { Value = "min(max(n1,0),1)", },
+						PointExpressionX = Input { Value = "0.5", },
+						PointExpressionY = Input { Value = "0.5-n2*(1-n1)", },
+					},
+				},
+				Txt2 = TextPlus {
+					SourceOp = "Txt1",
+					Inputs = {
+						SettingsNest = Input(),
+						Start = Input { Value = 0, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 1) .. '()%S+()')})[3] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 1) .. '()%S+()')})[3] or 1)-1), '[^\\128-\\191\\n]', ''))-0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+						End = Input { Value = 1, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 1) .. '()%S+()')})[4] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 1) .. '()%S+()')})[4] or 1)-1), '[^\\128-\\191]', ''))+0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+					},
+				},
+				WordBlur2 = Blur {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Filter = Input { Value = FuID { "Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "max(0, Main.InBlur*(1-WordMerge2.Blend))", },
+						Input = Input { SourceOp = "Txt2", Source = "Output", },
+					},
+				},
+				WordMerge2 = Merge {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Background = Input { SourceOp = "WordMerge1", Source = "Output", },
+						Foreground = Input { SourceOp = "WordBlur2", Source = "Output", },
+						Center = Input { SourceOp = "WordFx2", Source = "PointResult", },
+						Blend = Input { SourceOp = "WordFx2", Source = "NumberResult", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+				},
+				InCurve3 = LUTLookup {
+					SourceOp = "InCurve1",
+					Inputs = {
+						SettingsNest = Input(),
+						Input = Input { Value = 0, Expression = "min(max((time-((Main.WordTime3 >= 0 and Main.WordTime3 or 2*Main.WordStagger)+Main.SyncOffset))/max(Main.InDur,1),0),1)", },
+					},
+				},
+				WordFx3 = Expression {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						n1 = Input { SourceOp = "InCurve3", Source = "Value", },
+						n2 = Input { Value = 0.02, Expression = "Main.Rise", },
+						NumberExpression = Input { Value = "min(max(n1,0),1)", },
+						PointExpressionX = Input { Value = "0.5", },
+						PointExpressionY = Input { Value = "0.5-n2*(1-n1)", },
+					},
+				},
+				Txt3 = TextPlus {
+					SourceOp = "Txt1",
+					Inputs = {
+						SettingsNest = Input(),
+						Start = Input { Value = 0, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 2) .. '()%S+()')})[3] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 2) .. '()%S+()')})[3] or 1)-1), '[^\\128-\\191\\n]', ''))-0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+						End = Input { Value = 1, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 2) .. '()%S+()')})[4] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 2) .. '()%S+()')})[4] or 1)-1), '[^\\128-\\191]', ''))+0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+					},
+				},
+				WordBlur3 = Blur {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Filter = Input { Value = FuID { "Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "max(0, Main.InBlur*(1-WordMerge3.Blend))", },
+						Input = Input { SourceOp = "Txt3", Source = "Output", },
+					},
+				},
+				WordMerge3 = Merge {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Background = Input { SourceOp = "WordMerge2", Source = "Output", },
+						Foreground = Input { SourceOp = "WordBlur3", Source = "Output", },
+						Center = Input { SourceOp = "WordFx3", Source = "PointResult", },
+						Blend = Input { SourceOp = "WordFx3", Source = "NumberResult", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+				},
+				InCurve4 = LUTLookup {
+					SourceOp = "InCurve1",
+					Inputs = {
+						SettingsNest = Input(),
+						Input = Input { Value = 0, Expression = "min(max((time-((Main.WordTime4 >= 0 and Main.WordTime4 or 3*Main.WordStagger)+Main.SyncOffset))/max(Main.InDur,1),0),1)", },
+					},
+				},
+				WordFx4 = Expression {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						n1 = Input { SourceOp = "InCurve4", Source = "Value", },
+						n2 = Input { Value = 0.02, Expression = "Main.Rise", },
+						NumberExpression = Input { Value = "min(max(n1,0),1)", },
+						PointExpressionX = Input { Value = "0.5", },
+						PointExpressionY = Input { Value = "0.5-n2*(1-n1)", },
+					},
+				},
+				Txt4 = TextPlus {
+					SourceOp = "Txt1",
+					Inputs = {
+						SettingsNest = Input(),
+						Start = Input { Value = 0, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 3) .. '()%S+()')})[3] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 3) .. '()%S+()')})[3] or 1)-1), '[^\\128-\\191\\n]', ''))-0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+						End = Input { Value = 1, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 3) .. '()%S+()')})[4] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 3) .. '()%S+()')})[4] or 1)-1), '[^\\128-\\191]', ''))+0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+					},
+				},
+				WordBlur4 = Blur {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Filter = Input { Value = FuID { "Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "max(0, Main.InBlur*(1-WordMerge4.Blend))", },
+						Input = Input { SourceOp = "Txt4", Source = "Output", },
+					},
+				},
+				WordMerge4 = Merge {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Background = Input { SourceOp = "WordMerge3", Source = "Output", },
+						Foreground = Input { SourceOp = "WordBlur4", Source = "Output", },
+						Center = Input { SourceOp = "WordFx4", Source = "PointResult", },
+						Blend = Input { SourceOp = "WordFx4", Source = "NumberResult", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+				},
+				InCurve5 = LUTLookup {
+					SourceOp = "InCurve1",
+					Inputs = {
+						SettingsNest = Input(),
+						Input = Input { Value = 0, Expression = "min(max((time-((Main.WordTime5 >= 0 and Main.WordTime5 or 4*Main.WordStagger)+Main.SyncOffset))/max(Main.InDur,1),0),1)", },
+					},
+				},
+				WordFx5 = Expression {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						n1 = Input { SourceOp = "InCurve5", Source = "Value", },
+						n2 = Input { Value = 0.02, Expression = "Main.Rise", },
+						NumberExpression = Input { Value = "min(max(n1,0),1)", },
+						PointExpressionX = Input { Value = "0.5", },
+						PointExpressionY = Input { Value = "0.5-n2*(1-n1)", },
+					},
+				},
+				Txt5 = TextPlus {
+					SourceOp = "Txt1",
+					Inputs = {
+						SettingsNest = Input(),
+						Start = Input { Value = 0, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 4) .. '()%S+()')})[3] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 4) .. '()%S+()')})[3] or 1)-1), '[^\\128-\\191\\n]', ''))-0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+						End = Input { Value = 1, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 4) .. '()%S+()')})[4] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 4) .. '()%S+()')})[4] or 1)-1), '[^\\128-\\191]', ''))+0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+					},
+				},
+				WordBlur5 = Blur {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Filter = Input { Value = FuID { "Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "max(0, Main.InBlur*(1-WordMerge5.Blend))", },
+						Input = Input { SourceOp = "Txt5", Source = "Output", },
+					},
+				},
+				WordMerge5 = Merge {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Background = Input { SourceOp = "WordMerge4", Source = "Output", },
+						Foreground = Input { SourceOp = "WordBlur5", Source = "Output", },
+						Center = Input { SourceOp = "WordFx5", Source = "PointResult", },
+						Blend = Input { SourceOp = "WordFx5", Source = "NumberResult", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+				},
+				InCurve6 = LUTLookup {
+					SourceOp = "InCurve1",
+					Inputs = {
+						SettingsNest = Input(),
+						Input = Input { Value = 0, Expression = "min(max((time-((Main.WordTime6 >= 0 and Main.WordTime6 or 5*Main.WordStagger)+Main.SyncOffset))/max(Main.InDur,1),0),1)", },
+					},
+				},
+				WordFx6 = Expression {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						n1 = Input { SourceOp = "InCurve6", Source = "Value", },
+						n2 = Input { Value = 0.02, Expression = "Main.Rise", },
+						NumberExpression = Input { Value = "min(max(n1,0),1)", },
+						PointExpressionX = Input { Value = "0.5", },
+						PointExpressionY = Input { Value = "0.5-n2*(1-n1)", },
+					},
+				},
+				Txt6 = TextPlus {
+					SourceOp = "Txt1",
+					Inputs = {
+						SettingsNest = Input(),
+						Start = Input { Value = 0, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 5) .. '()%S+()')})[3] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 5) .. '()%S+()')})[3] or 1)-1), '[^\\128-\\191\\n]', ''))-0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+						End = Input { Value = 1, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 5) .. '()%S+()')})[4] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 5) .. '()%S+()')})[4] or 1)-1), '[^\\128-\\191]', ''))+0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+					},
+				},
+				WordBlur6 = Blur {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Filter = Input { Value = FuID { "Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "max(0, Main.InBlur*(1-WordMerge6.Blend))", },
+						Input = Input { SourceOp = "Txt6", Source = "Output", },
+					},
+				},
+				WordMerge6 = Merge {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Background = Input { SourceOp = "WordMerge5", Source = "Output", },
+						Foreground = Input { SourceOp = "WordBlur6", Source = "Output", },
+						Center = Input { SourceOp = "WordFx6", Source = "PointResult", },
+						Blend = Input { SourceOp = "WordFx6", Source = "NumberResult", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+				},
+				InCurve7 = LUTLookup {
+					SourceOp = "InCurve1",
+					Inputs = {
+						SettingsNest = Input(),
+						Input = Input { Value = 0, Expression = "min(max((time-((Main.WordTime7 >= 0 and Main.WordTime7 or 6*Main.WordStagger)+Main.SyncOffset))/max(Main.InDur,1),0),1)", },
+					},
+				},
+				WordFx7 = Expression {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						n1 = Input { SourceOp = "InCurve7", Source = "Value", },
+						n2 = Input { Value = 0.02, Expression = "Main.Rise", },
+						NumberExpression = Input { Value = "min(max(n1,0),1)", },
+						PointExpressionX = Input { Value = "0.5", },
+						PointExpressionY = Input { Value = "0.5-n2*(1-n1)", },
+					},
+				},
+				Txt7 = TextPlus {
+					SourceOp = "Txt1",
+					Inputs = {
+						SettingsNest = Input(),
+						Start = Input { Value = 0, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 6) .. '()%S+()')})[3] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 6) .. '()%S+()')})[3] or 1)-1), '[^\\128-\\191\\n]', ''))-0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+						End = Input { Value = 1, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 6) .. '()%S+()')})[4] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 6) .. '()%S+()')})[4] or 1)-1), '[^\\128-\\191]', ''))+0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+					},
+				},
+				WordBlur7 = Blur {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Filter = Input { Value = FuID { "Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "max(0, Main.InBlur*(1-WordMerge7.Blend))", },
+						Input = Input { SourceOp = "Txt7", Source = "Output", },
+					},
+				},
+				WordMerge7 = Merge {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Background = Input { SourceOp = "WordMerge6", Source = "Output", },
+						Foreground = Input { SourceOp = "WordBlur7", Source = "Output", },
+						Center = Input { SourceOp = "WordFx7", Source = "PointResult", },
+						Blend = Input { SourceOp = "WordFx7", Source = "NumberResult", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+				},
+				InCurve8 = LUTLookup {
+					SourceOp = "InCurve1",
+					Inputs = {
+						SettingsNest = Input(),
+						Input = Input { Value = 0, Expression = "min(max((time-((Main.WordTime8 >= 0 and Main.WordTime8 or 7*Main.WordStagger)+Main.SyncOffset))/max(Main.InDur,1),0),1)", },
+					},
+				},
+				WordFx8 = Expression {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						n1 = Input { SourceOp = "InCurve8", Source = "Value", },
+						n2 = Input { Value = 0.02, Expression = "Main.Rise", },
+						NumberExpression = Input { Value = "min(max(n1,0),1)", },
+						PointExpressionX = Input { Value = "0.5", },
+						PointExpressionY = Input { Value = "0.5-n2*(1-n1)", },
+					},
+				},
+				Txt8 = TextPlus {
+					SourceOp = "Txt1",
+					Inputs = {
+						SettingsNest = Input(),
+						Start = Input { Value = 0, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 7) .. '()%S+()')})[3] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 7) .. '()%S+()')})[3] or 1)-1), '[^\\128-\\191\\n]', ''))-0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+						End = Input { Value = 1, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 7) .. '()%S+()')})[4] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 7) .. '()%S+()')})[4] or 1)-1), '[^\\128-\\191]', ''))+0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+					},
+				},
+				WordBlur8 = Blur {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Filter = Input { Value = FuID { "Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "max(0, Main.InBlur*(1-WordMerge8.Blend))", },
+						Input = Input { SourceOp = "Txt8", Source = "Output", },
+					},
+				},
+				WordMerge8 = Merge {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Background = Input { SourceOp = "WordMerge7", Source = "Output", },
+						Foreground = Input { SourceOp = "WordBlur8", Source = "Output", },
+						Center = Input { SourceOp = "WordFx8", Source = "PointResult", },
+						Blend = Input { SourceOp = "WordFx8", Source = "NumberResult", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+				},
+				InCurve9 = LUTLookup {
+					SourceOp = "InCurve1",
+					Inputs = {
+						SettingsNest = Input(),
+						Input = Input { Value = 0, Expression = "min(max((time-((Main.WordTime9 >= 0 and Main.WordTime9 or 8*Main.WordStagger)+Main.SyncOffset))/max(Main.InDur,1),0),1)", },
+					},
+				},
+				WordFx9 = Expression {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						n1 = Input { SourceOp = "InCurve9", Source = "Value", },
+						n2 = Input { Value = 0.02, Expression = "Main.Rise", },
+						NumberExpression = Input { Value = "min(max(n1,0),1)", },
+						PointExpressionX = Input { Value = "0.5", },
+						PointExpressionY = Input { Value = "0.5-n2*(1-n1)", },
+					},
+				},
+				Txt9 = TextPlus {
+					SourceOp = "Txt1",
+					Inputs = {
+						SettingsNest = Input(),
+						Start = Input { Value = 0, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 8) .. '()%S+()')})[3] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 8) .. '()%S+()')})[3] or 1)-1), '[^\\128-\\191\\n]', ''))-0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+						End = Input { Value = 1, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 8) .. '()%S+()')})[4] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 8) .. '()%S+()')})[4] or 1)-1), '[^\\128-\\191]', ''))+0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+					},
+				},
+				WordBlur9 = Blur {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Filter = Input { Value = FuID { "Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "max(0, Main.InBlur*(1-WordMerge9.Blend))", },
+						Input = Input { SourceOp = "Txt9", Source = "Output", },
+					},
+				},
+				WordMerge9 = Merge {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Background = Input { SourceOp = "WordMerge8", Source = "Output", },
+						Foreground = Input { SourceOp = "WordBlur9", Source = "Output", },
+						Center = Input { SourceOp = "WordFx9", Source = "PointResult", },
+						Blend = Input { SourceOp = "WordFx9", Source = "NumberResult", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+				},
+				InCurve10 = LUTLookup {
+					SourceOp = "InCurve1",
+					Inputs = {
+						SettingsNest = Input(),
+						Input = Input { Value = 0, Expression = "min(max((time-((Main.WordTime10 >= 0 and Main.WordTime10 or 9*Main.WordStagger)+Main.SyncOffset))/max(Main.InDur,1),0),1)", },
+					},
+				},
+				WordFx10 = Expression {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						n1 = Input { SourceOp = "InCurve10", Source = "Value", },
+						n2 = Input { Value = 0.02, Expression = "Main.Rise", },
+						NumberExpression = Input { Value = "min(max(n1,0),1)", },
+						PointExpressionX = Input { Value = "0.5", },
+						PointExpressionY = Input { Value = "0.5-n2*(1-n1)", },
+					},
+				},
+				Txt10 = TextPlus {
+					SourceOp = "Txt1",
+					Inputs = {
+						SettingsNest = Input(),
+						Start = Input { Value = 0, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 9) .. '()%S+()')})[3] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 9) .. '()%S+()')})[3] or 1)-1), '[^\\128-\\191\\n]', ''))-0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+						End = Input { Value = 1, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 9) .. '()%S+()')})[4] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 9) .. '()%S+()')})[4] or 1)-1), '[^\\128-\\191]', ''))+0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+					},
+				},
+				WordBlur10 = Blur {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Filter = Input { Value = FuID { "Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "max(0, Main.InBlur*(1-WordMerge10.Blend))", },
+						Input = Input { SourceOp = "Txt10", Source = "Output", },
+					},
+				},
+				WordMerge10 = Merge {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Background = Input { SourceOp = "WordMerge9", Source = "Output", },
+						Foreground = Input { SourceOp = "WordBlur10", Source = "Output", },
+						Center = Input { SourceOp = "WordFx10", Source = "PointResult", },
+						Blend = Input { SourceOp = "WordFx10", Source = "NumberResult", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+				},
+				InCurve11 = LUTLookup {
+					SourceOp = "InCurve1",
+					Inputs = {
+						SettingsNest = Input(),
+						Input = Input { Value = 0, Expression = "min(max((time-((Main.WordTime11 >= 0 and Main.WordTime11 or 10*Main.WordStagger)+Main.SyncOffset))/max(Main.InDur,1),0),1)", },
+					},
+				},
+				WordFx11 = Expression {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						n1 = Input { SourceOp = "InCurve11", Source = "Value", },
+						n2 = Input { Value = 0.02, Expression = "Main.Rise", },
+						NumberExpression = Input { Value = "min(max(n1,0),1)", },
+						PointExpressionX = Input { Value = "0.5", },
+						PointExpressionY = Input { Value = "0.5-n2*(1-n1)", },
+					},
+				},
+				Txt11 = TextPlus {
+					SourceOp = "Txt1",
+					Inputs = {
+						SettingsNest = Input(),
+						Start = Input { Value = 0, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 10) .. '()%S+()')})[3] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 10) .. '()%S+()')})[3] or 1)-1), '[^\\128-\\191\\n]', ''))-0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+						End = Input { Value = 1, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 10) .. '()%S+()')})[4] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 10) .. '()%S+()')})[4] or 1)-1), '[^\\128-\\191]', ''))+0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+					},
+				},
+				WordBlur11 = Blur {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Filter = Input { Value = FuID { "Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "max(0, Main.InBlur*(1-WordMerge11.Blend))", },
+						Input = Input { SourceOp = "Txt11", Source = "Output", },
+					},
+				},
+				WordMerge11 = Merge {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Background = Input { SourceOp = "WordMerge10", Source = "Output", },
+						Foreground = Input { SourceOp = "WordBlur11", Source = "Output", },
+						Center = Input { SourceOp = "WordFx11", Source = "PointResult", },
+						Blend = Input { SourceOp = "WordFx11", Source = "NumberResult", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+				},
+				InCurve12 = LUTLookup {
+					SourceOp = "InCurve1",
+					Inputs = {
+						SettingsNest = Input(),
+						Input = Input { Value = 0, Expression = "min(max((time-((Main.WordTime12 >= 0 and Main.WordTime12 or 11*Main.WordStagger)+Main.SyncOffset))/max(Main.InDur,1),0),1)", },
+					},
+				},
+				WordFx12 = Expression {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						n1 = Input { SourceOp = "InCurve12", Source = "Value", },
+						n2 = Input { Value = 0.02, Expression = "Main.Rise", },
+						NumberExpression = Input { Value = "min(max(n1,0),1)", },
+						PointExpressionX = Input { Value = "0.5", },
+						PointExpressionY = Input { Value = "0.5-n2*(1-n1)", },
+					},
+				},
+				Txt12 = TextPlus {
+					SourceOp = "Txt1",
+					Inputs = {
+						SettingsNest = Input(),
+						Start = Input { Value = 0, Expression = "(({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 11) .. '()%S+()')})[3] and (select(2, string.gsub(string.sub(Txt1.StyledText.Value, 1, (({string.find(Txt1.StyledText.Value, '^%s*' .. string.rep('%S+%s+', 11) .. '()%S+()')})[3] or 1)-1), '[^\\128-\\191\\n]', ''))-0.3) or select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')))/math.max(select(2, string.gsub(Txt1.StyledText.Value, '[^\\128-\\191]', '')),1)", },
+						End = Input { Value = 1, Expression = "1", },
+					},
+				},
+				WordBlur12 = Blur {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Filter = Input { Value = FuID { "Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "max(0, Main.InBlur*(1-WordMerge12.Blend))", },
+						Input = Input { SourceOp = "Txt12", Source = "Output", },
+					},
+				},
+				WordMerge12 = Merge {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Background = Input { SourceOp = "WordMerge11", Source = "Output", },
+						Foreground = Input { SourceOp = "WordBlur12", Source = "Output", },
+						Center = Input { SourceOp = "WordFx12", Source = "PointResult", },
+						Blend = Input { SourceOp = "WordFx12", Source = "NumberResult", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+				},
+				Main = Background {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Width = Input { Value = 16, },
+						Height = Input { Value = 16, },
+						WordStagger = Input { Value = 4, },
+						SyncOffset = Input { Value = -2, },
+						InDur = Input { Value = 18, },
+						Rise = Input { Value = 0.02, },
+						InBlur = Input { Value = 10, },
+						OutDur = Input { Value = 12, },
+						OutLift = Input { Value = 0.015, },
+						OutBlur = Input { Value = 12, },
+						WordTime1 = Input { Value = -1, },
+						WordTime2 = Input { Value = -1, },
+						WordTime3 = Input { Value = -1, },
+						WordTime4 = Input { Value = -1, },
+						WordTime5 = Input { Value = -1, },
+						WordTime6 = Input { Value = -1, },
+						WordTime7 = Input { Value = -1, },
+						WordTime8 = Input { Value = -1, },
+						WordTime9 = Input { Value = -1, },
+						WordTime10 = Input { Value = -1, },
+						WordTime11 = Input { Value = -1, },
+						WordTime12 = Input { Value = -1, },
+					},
+					UserControls = ordered() {
+						WordStagger = { LINKS_Name = "Stagger (frames / word, when not synced)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = 4, INP_MinScale = 0, INP_MaxScale = 15, INP_MinAllowed = 0, ICS_ControlPage = "Controls" },
+						SyncOffset = { LINKS_Name = "Sync Offset (frames)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = -2, INP_MinScale = -10, INP_MaxScale = 10, ICS_ControlPage = "Controls" },
+						InDur = { LINKS_Name = "In Duration (frames)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = 18, INP_MinScale = 1, INP_MaxScale = 60, INP_MinAllowed = 1, ICS_ControlPage = "Controls" },
+						Rise = { LINKS_Name = "Rise Distance", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = 0.02, INP_MinScale = 0, INP_MaxScale = 0.1, ICS_ControlPage = "Controls" },
+						InBlur = { LINKS_Name = "In Blur", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = 10, INP_MinScale = 0, INP_MaxScale = 40, INP_MinAllowed = 0, ICS_ControlPage = "Controls" },
+						OutDur = { LINKS_Name = "Out Duration (frames)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = 12, INP_MinScale = 0, INP_MaxScale = 60, INP_MinAllowed = 0, ICS_ControlPage = "Controls" },
+						OutLift = { LINKS_Name = "Out Lift", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = 0.015, INP_MinScale = 0, INP_MaxScale = 0.1, ICS_ControlPage = "Controls" },
+						OutBlur = { LINKS_Name = "Out Blur", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = 12, INP_MinScale = 0, INP_MaxScale = 40, INP_MinAllowed = 0, ICS_ControlPage = "Controls" },
+						WordTime1 = { LINKS_Name = "Word 1 Time (frames, -1 = auto)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = -1, INP_MinScale = -1, INP_MaxScale = 120, INP_MinAllowed = -1, IC_Visible = false, ICS_ControlPage = "Controls" },
+						WordTime2 = { LINKS_Name = "Word 2 Time (frames, -1 = auto)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = -1, INP_MinScale = -1, INP_MaxScale = 120, INP_MinAllowed = -1, IC_Visible = false, ICS_ControlPage = "Controls" },
+						WordTime3 = { LINKS_Name = "Word 3 Time (frames, -1 = auto)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = -1, INP_MinScale = -1, INP_MaxScale = 120, INP_MinAllowed = -1, IC_Visible = false, ICS_ControlPage = "Controls" },
+						WordTime4 = { LINKS_Name = "Word 4 Time (frames, -1 = auto)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = -1, INP_MinScale = -1, INP_MaxScale = 120, INP_MinAllowed = -1, IC_Visible = false, ICS_ControlPage = "Controls" },
+						WordTime5 = { LINKS_Name = "Word 5 Time (frames, -1 = auto)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = -1, INP_MinScale = -1, INP_MaxScale = 120, INP_MinAllowed = -1, IC_Visible = false, ICS_ControlPage = "Controls" },
+						WordTime6 = { LINKS_Name = "Word 6 Time (frames, -1 = auto)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = -1, INP_MinScale = -1, INP_MaxScale = 120, INP_MinAllowed = -1, IC_Visible = false, ICS_ControlPage = "Controls" },
+						WordTime7 = { LINKS_Name = "Word 7 Time (frames, -1 = auto)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = -1, INP_MinScale = -1, INP_MaxScale = 120, INP_MinAllowed = -1, IC_Visible = false, ICS_ControlPage = "Controls" },
+						WordTime8 = { LINKS_Name = "Word 8 Time (frames, -1 = auto)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = -1, INP_MinScale = -1, INP_MaxScale = 120, INP_MinAllowed = -1, IC_Visible = false, ICS_ControlPage = "Controls" },
+						WordTime9 = { LINKS_Name = "Word 9 Time (frames, -1 = auto)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = -1, INP_MinScale = -1, INP_MaxScale = 120, INP_MinAllowed = -1, IC_Visible = false, ICS_ControlPage = "Controls" },
+						WordTime10 = { LINKS_Name = "Word 10 Time (frames, -1 = auto)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = -1, INP_MinScale = -1, INP_MaxScale = 120, INP_MinAllowed = -1, IC_Visible = false, ICS_ControlPage = "Controls" },
+						WordTime11 = { LINKS_Name = "Word 11 Time (frames, -1 = auto)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = -1, INP_MinScale = -1, INP_MaxScale = 120, INP_MinAllowed = -1, IC_Visible = false, ICS_ControlPage = "Controls" },
+						WordTime12 = { LINKS_Name = "Word 12 Time (frames, -1 = auto)", LINKID_DataType = "Number", INPID_InputControl = "SliderControl", INP_Default = -1, INP_MinScale = -1, INP_MaxScale = 120, INP_MinAllowed = -1, IC_Visible = false, ICS_ControlPage = "Controls" },
+					},
+				},
+				OutCurveLookup = LUTBezier {
+					KeyColorSplines = {
+						[0] = {
+							[0.0053475935828875] = { 0.0148148148148146, RH = { 0.278990164710916, 0.0148148148148146 } },
+							[0.622914464189847] = { 0.585685903685503, LH = { 0.586668586937423, 0.315474304017224 }, RH = { 0.678248481491738, 0.998188372535311 } },
+							[1] = { 1, LH = { 1, 1 } }
+						}
+					},
+					SplineColor = { Red = 255, Green = 255, Blue = 255 },
+				},
+				OutCurve = LUTLookup {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Source = Input { Value = FuID { "Custom" }, },
+						Input = Input { Value = 0, Expression = "min(max((time-(comp.RenderEnd+1-Main.OutDur))/max(Main.OutDur,1),0),1)", },
+						Curve = Input { Value = FuID { "Custom" }, },
+						EaseIn = Input { Value = FuID { "Sine" }, },
+						EaseOut = Input { Value = FuID { "Sine" }, },
+						Lookup = Input { SourceOp = "OutCurveLookup", Source = "Value", },
+					},
+				},
+				OutFx = Expression {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						n1 = Input { SourceOp = "OutCurve", Source = "Value", },
+						n2 = Input { Value = 0.015, Expression = "Main.OutLift", },
+						NumberExpression = Input { Value = "1-min(max(n1,0),1)", },
+						PointExpressionX = Input { Value = "0.5", },
+						PointExpressionY = Input { Value = "0.5+n2*n1", },
+					},
+				},
+				OutBlurTool = Blur {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Filter = Input { Value = FuID { "Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "max(0, Main.OutBlur*(1-OutMerge.Blend))", },
+						Input = Input { SourceOp = "WordMerge12", Source = "Output", },
+					},
+				},
+				Clear = Background {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						GlobalOut = Input { Value = 20000, },
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftAlpha = Input { Value = 0, },
+					},
+				},
+				OutMerge = Merge {
+					CtrlWZoom = false,
+					NameSet = true,
+					Inputs = {
+						Background = Input { SourceOp = "Clear", Source = "Output", },
+						Foreground = Input { SourceOp = "OutBlurTool", Source = "Output", },
+						Center = Input { SourceOp = "OutFx", Source = "PointResult", },
+						Blend = Input { SourceOp = "OutFx", Source = "NumberResult", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+				},
+			},
+		},
+	},
+	ActiveTool = "FluidRevealWords",
+}
