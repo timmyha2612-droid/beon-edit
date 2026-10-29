@@ -77,6 +77,8 @@ Work in a folder (`WORK`, e.g. the shoot's `_claude_scratch/subs`, never Dropbox
 - `InsertFusionTitleIntoTimeline` is a ripple insert at the playhead on V1: it splits the previous title and pushes its tail along. Delete the tails after each insert, and trim the end by inserting one more title at the end and deleting it.
 - **The playhead lags** `SetCurrentTimecode`, worst right after switching timelines. Set it, poll `GetCurrentTimecode` until it matches, and assert where each title landed. C4a was built in the wrong places before this rule.
 - The duplicated subtitles timeline must keep **one video track**: with several, Resolve's track targeting drops the titles on V2 and the tail clean-up misses them (Green Oct2 C3). `step_dup` and Auto Subtitles delete the extra tracks.
+- Resolve crashed once mid-insert (Green C6, 29 Oct) after about 14 quick inserts in a row. Insert in chunks of 5 to 7 per call with about 1 s between inserts. If it goes down, wait for Tim to restart it, check the subtitles timeline (autosave kept every title already placed), and carry on from the next caption; don't redo the ones already placed.
+- Tim lowers the subtitles by setting the compound clip's Tilt (C3/C6: -450). Copy it onto new shorts with `SetProperty("Tilt", …)`, and use `CROP_Y=1250` for the check sheet.
 - Wait after `SetCurrentTimeline` until `GetCurrentTimeline()` reports the new one.
 - `AppendToTimeline` startFrame/endFrame are frames *inside the subtitles timeline* (0..length); recordFrame is the main timeline's start.
 - Transcript words carry the **clip's own timecode**: subtract the clip's Start TC, and scale by timeline fps / clip fps (25p camera on a 24p timeline).
