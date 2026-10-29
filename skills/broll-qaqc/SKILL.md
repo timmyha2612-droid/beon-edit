@@ -1,0 +1,79 @@
+---
+name: broll-qaqc
+description: "This skill should be used when adding, reviewing or fixing B-roll on a Beon Media concept edit in DaVinci Resolve: \"add B-roll\", \"pick shots for this line\", \"check the shaky shots\", \"use shots we haven't used\", \"fix this shot\", \"pacing pass\". Covers selection, placement, the pacing gate, the motion card, the fix ladder (re-pick, Gyroflow, Speed Warp, replace) and sign-off.\n"
+metadata:
+  version: "0.3.0"
+---
+
+# B-roll QA/QC (Tim, Beon Media)
+
+Work in stages and stop at the gates. Never touch V1/A1 (interview), the music track, or anything Tim says he has placed. Stop all Resolve calls when Tim says he needs Resolve; analysis keeps running in the device VM.
+
+## Stage 0. Shot log first
+
+Read `<shoot>/_shotlog/shotlog.json` (shotlog skill). Reuse gyro windows, people windows, verified frames, tone tags, motion cards and transcripts; check `usage` (prefer unused windows); read `lessons`. Write back at the end.
+
+## Stage 1. Select
+
+- Cut inside the steadiest window: skip the first and last ~1 s, no focus pulls or exposure shifts, keep moves whole (start once underway, out before it eases).
+- Fallback when no clean window or no other option: a shot outside the steadiest window can work if it's slowed to a suitable speed and gyro-stabilised. Use it only when necessary and flag it.
+- Never use a videographer reset (camera drifting back to the start of a move). Find the clip's real move (longest run in a consistent gyro direction) and reject windows moving the opposite way or between passes.
+- Re-score any hand-picked window (shake and direction) before placing.
+- Fast window pick: `scripts/bestwin.py GYRO_DIR CLIP REC_SECONDS --speed 48 --avoid <used ranges>` ranks windows from the ingest gyro cache in milliseconds (shake tier, camera speed, uneven moves) and skips ranges already used in the series. Then confirm the winner with a motion card.
+- 9:16 framing: `scripts/framing_sheet.py CLIP T OUT.jpg --pans a,b --x <subject x> --times <end of move>` draws the vertical windows and a Pan ruler on the full frame, at the start and end of a moving shot, and prints the Pan that centres a subject.
+- 9:16 reframe sideways [Tim, 29 Oct 2026]: the vertical window only sees about a third of a 16:9 frame, so when the subject (the person, sign, door or feature the line is about) isn't in the middle, slide the window sideways with Pan to put it there. Never leave the subject cut by the window edge or sitting off to one side with empty wall in the middle. Moving shot: centre the subject mid-shot, then check the first and last frame still hold it. No single subject (empty room): frame the strongest feature or the leading lines. If the subject is beyond the slide limit, accept it off-centre or re-pick. Check every B-roll shot this way before the pacing gate, and verify with a rendered still.
+- Pan units differ per timeline. Most 1080x1920 timelines take fill-space Pan ((0.5 - x) * 3413 for UHD at Zoom 1); some report scaleToFit and render fill and take fit-space Pan ((0.5 - x) * 1080; Green Oct 2026). `framing_sheet.py --space fit` prints fit-space values. Confirm with one rendered still per timeline before setting many.
+- Matching: if there's an exact match for the line (what's named, the person talked about), use it. If not, use whatever fits the line without creating a misunderstanding (never a shot that implies something false). A line about a specific room or light must show that room if it's shown at all.
+- People: confirm identity (shot log people registry). The first and last ~0.3 s must not freeze on a wide-open mouth or grimace; nudge up to ±0.5 s inside the steady window (`scripts/mouth_check.py`). Goofy or playful moments only where the concept allows it; ask in the opening grilling.
+- Light spots: a small blown highlight is fine. Reject or shorten a shot when the hot spot is a significant part of the frame or the shot lingers on it (C7 R14).
+
+## Stage 2. Place
+
+- Roughly 50/50 speaker and B-roll; walkthrough pieces can run heavier (C7 finished at 64%).
+- Open each speaker turn on camera ~1.5–2 s; cover visible jump cuts (see aroll-cut for when a small one can stay); in long takes switch every ~4–6 s.
+- Phrase-led rhythm: shots ~2–3 s, changing on sentence breaks.
+- Open with 1–1.5 s of B-roll only before the first line.
+- Breathing gap (hero property shots, music only) when the edit needs it: between two separate points or two answers, or when the speech has run continuous and fast for too long. Size it to the music once music is in.
+- Speed: first try 50p empty-house shots at 48% and people at 50–60% (optical flow). If a shot still reads shaky, go slower (see fix ladder).
+- B-roll is video only, hard cuts, on V2. Name items `<slot> <clip>` (e.g. `R4 0331`).
+- Movement flow: no back-to-back opposite camera moves; similar speeds within a run; the last shot settles before cutting back to camera; cut on motion between moving shots.
+- Outro and ending depend on the edit; Tim usually runs B-roll past the last word into the end card.
+
+API: `AppendToTimeline` with source frames, length `ceil(D*fps/24)` (exclusive end), absolute `recordFrame`. Slow-mo: append real-time length then `SetSpeed({'Percentage': 48.0, 'RippleTimeline': False})`. Retime quality: `SetProperty('RetimeProcess', RETIME_OPTICAL_FLOW)`, `SetProperty('MotionEstimation', MOTION_EST_SPEED_WARP_BETTER)`.
+
+## Stage 3. Pacing gate (Tim approves)
+
+Report shot count, coverage %, shot lengths (flag < 1 s or > 4 s), uncovered jump cuts, on-camera openings per turn. Wait for Tim's go.
+
+Gap check before the gate [Tim, 29 Oct 2026]: walk the top visible layer frame by frame across V1, the angle track and B-roll. Nothing may show on screen for under ~1 s (24 frames) between two other shots: no 2-4 frame flash of the speaker between B-roll shots (Green C5 28:10, C6 16:10), no B-angle sliver before a B-roll shot. A B-roll shot that covers an A-roll cut must run to that cut frame or past it, never end a frame or two short (C6 32:05). Fix by trimming the neighbouring B-roll to meet exactly (head or tail), or move the shot when the clip has no handle. API: there's no trim call, so delete and re-append at the new range: append D frames at 100% (`endFrame = sf + ceil(D * fps / 24)`), then `SetSpeed` (Resolve keeps the duration and trims the source), then re-apply Pan/Tilt/Zoom, retime, name, colour and markers.
+
+## Stage 4. Detail pass: read the motion
+
+Stills hide motion. For every placed shot, render a motion card and read it:
+
+`python3 scripts/motion_card.py CLIP T_IN SRC_DUR OUT.png --speed 48 --pan P --tilt T --zoom Z --label "R4 0331"`
+
+The card shows a 6-frame filmstrip of the 9:16 window, a first/last onion skin, flow arrows mid-shot, the camera path (pan, tilt, zoom speed per frame) and jitter per output frame at 1080 wide. The JSON line gives the move, jitter p90/max and flags (mid-ease, uneven speed, per-axis slowing, direction reversal). Save cards outside Dropbox; stage them to look.
+
+- Jitter tiers (provisional, calibrate against gyro): p90 < 1.0 px pass, 1.0–2.0 check, > 2.0 fix. Also keep the gyro tiers: pass < 0.35, check 0.35–0.6, fix > 0.6 deg/s.
+- Flag jerky moves: speed varies > 30% inside the shot, or it starts or ends mid-ease; a reversal means a reset.
+- Example: C7 R4 at 11.0 s @48% had jitter p90 0.85 px, max 1.46. Tim slid it to 11.56 s and slowed it to 30%: p90 0.38, max 0.71.
+- Check the first and last frame of every shot (resets, moves ending on a blank wall, awkward faces) and the tone match.
+
+## Stage 5. Fix ladder (in order)
+
+1. Slide to a steadier part of the same clip, or re-pick another window of the same subject; re-score it.
+2. Stabilise with Gyroflow: colour the clip Orange and add a clip marker whose custom data is `{"gyroflow": {"smoothness": .., "horizon": .., "horizon_amount": .., "horizon_roll": .., "zoom_mode": "Dynamic", "zoom_window": 4, "max_zoom": ..}}`. Presets: static 0.3 + horizon lock; slow gimbal push/slide/orbit 0.5 + horizon lock; tilt reveals 0.5 + roll-only lock; handheld follow / walk-and-talk 0.8, no horizon lock. Tim's script (Workspace > Scripts > Utility > "Gyroflow Stabilize Flagged") stabilises at 100%, re-applies speed and retime settings, renders next to the source clip, places it on a "Gyroflow" track, disables the original and colours the new clip Yellow.
+   - Reframe first, Gyroflow second: the script copies Pan, Tilt, Zoom and crop onto the stabilised clip. It refuses camera files with no gyro data (REQUIRE_GYRO), so only flag shots whose file has motion data (Sony rtmd track) and list the rest for Tim.
+   - When Tim asks for Gyroflow on all B-roll, flag every gyro-capable B-roll shot Orange with a preset marker, not only the shaky ones.
+3. If still shaky: slow to ~50% with Optical Flow + Speed Warp Better.
+4. If still shaky: ~30%, only if the subject doesn't move strangely.
+5. Replace with a different clip.
+
+## Stage 6. Re-measure and sign-off
+
+Re-run the motion card on fixed shots, check first and last frames, run the proxy render check (finish-pass), set Green, then Tim's watch-down. Write QC results, motion verdicts, usage and lessons back to the shot log.
+
+## QC reporting
+
+Clip colours: Green pass, Yellow check or stabilised pending re-measure, Orange stabilise, Violet retime, Chocolate replace. A marker on each flagged shot with score and reason. Short chat table: shot | clip | window | jitter | move flags | face/tone | action | status.

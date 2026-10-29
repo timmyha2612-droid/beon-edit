@@ -1,0 +1,47 @@
+---
+name: client-styles
+description: "This skill should be used at the start of any Beon Media edit for a named client (Namir Mikha, Arriva, Ray White, Jack Ho, Funds Now, Prestige, or a new one), before the opening grilling, and whenever Tim says \"do it the Namir way\", \"Arriva style\", \"what's our usual for this client\", \"set up a profile for this client\" or finishes a client concept worth learning from. Holds one style profile per client: format, length, structure, A-roll, B-roll, audio, music, ending, grade, brand rules and where the footage lives.\n"
+metadata:
+  version: "0.1.0"
+---
+
+# Client style profiles
+
+Each client gets the same Beon system (house-rules and the stage skills) plus its own habits. The profile holds those habits so the grilling only asks what's still open.
+
+## Order of authority
+
+1. The brief and what Tim says on this job.
+2. The client profile (`references/<client>.md`).
+3. The house defaults in the stage skills.
+
+When the profile and a stage skill disagree, the profile wins for that client. When the brief and the profile disagree, follow the brief and ask whether the profile should change.
+
+## Using a profile
+
+1. At the start of the job, read `references/<client>.md`. If there's none, copy `references/_template.md` and fill in what the brief says.
+2. In the house-rules grilling, skip questions the profile answers with a [Tim] rule. Confirm [inferred] rules that matter for this concept. Ask about anything marked "ask".
+3. Apply the profile in every stage: length and structure in aroll-cut, coverage and speeds in broll-qaqc, the template and per-client habits in colour-grade, music, end card and delivery in finish-pass.
+4. Mention in the report which profile rules were applied and anything that broke from them.
+
+## Tags
+
+- [Tim]: Tim said it, or confirmed it. Apply without asking.
+- [inferred]: measured from one or more of Tim's finished edits but not confirmed. Apply as a default, and ask when it matters.
+- ask: unknown, ask Tim in the grilling.
+- Give each rule its source (concept and date), e.g. "(C7, 15 Oct 2026)".
+
+## Keeping profiles current
+
+- After Tim finishes a concept (learn-from-tim), add or adjust the client's rules with numbers from his final: length, speech time, coverage, speeds, grade values, music timings, end card.
+- A rule seen in two or more of Tim's finals with no counter-example can be marked [inferred, repeated]. Only Tim's word makes it [Tim].
+- Keep each profile short, one line per rule. Put long analyses in the project docs and link the doc name.
+- Never write client footage, stills or renders into the plugin. Profiles are text only.
+
+## Profiles
+
+| Client | File | State |
+|---|---|---|
+| Namir Mikha (real estate agent) | `references/namir-mikha.md` | C6, C1, C7 learned |
+| Arriva (apartment building, Strathfield) | `references/arriva.md` | Oct C1/C3 first cut; grades read from C2, Sep C3, C4 |
+| Ray White, Jack Ho, Funds Now, Prestige | none yet | Start from `_template.md` on the first job |
