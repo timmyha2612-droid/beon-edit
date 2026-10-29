@@ -22,7 +22,7 @@ Read `<shoot>/_shotlog/shotlog.json` (shotlog skill). Reuse gyro windows, people
 - Fast window pick: `scripts/bestwin.py GYRO_DIR CLIP REC_SECONDS --speed 48 --avoid <used ranges>` ranks windows from the ingest gyro cache in milliseconds (shake tier, camera speed, uneven moves) and skips ranges already used in the series. Then confirm the winner with a motion card.
 - 9:16 framing: `scripts/framing_sheet.py CLIP T OUT.jpg --pans a,b --x <subject x> --times <end of move>` draws the vertical windows and a Pan ruler on the full frame, at the start and end of a moving shot, and prints the Pan that centres a subject.
 - 9:16 reframe sideways [Tim, 29 Oct 2026]: the vertical window only sees about a third of a 16:9 frame, so when the subject (the person, sign, door or feature the line is about) isn't in the middle, slide the window sideways with Pan to put it there. Never leave the subject cut by the window edge or sitting off to one side with empty wall in the middle. Moving shot: centre the subject mid-shot, then check the first and last frame still hold it. No single subject (empty room): frame the strongest feature or the leading lines. If the subject is beyond the slide limit, accept it off-centre or re-pick. Check every B-roll shot this way before the pacing gate, and verify with a rendered still.
-- Pan units differ per timeline. Most 1080x1920 timelines take fill-space Pan ((0.5 - x) * 3413 for UHD at Zoom 1); some report scaleToFit and render fill and take fit-space Pan ((0.5 - x) * 1080; Green Oct 2026). `framing_sheet.py --space fit` prints fit-space values. Confirm with one rendered still per timeline before setting many.
+- Pan units differ per timeline. Most 1080x1920 timelines take fill-space Pan ((0.5 - x) * 3413 for UHD at Zoom 1); some report scaleToFit and render fill and take fit-space Pan ((0.5 - x) * 1080; Green Oct 2026). `framing_sheet.py --space fit` prints fit-space values. Confirm with one rendered still per timeline before setting many. The readback can also differ from what a script wrote: on Green C3/C5 every Pan later read back as 1/4 of the value set while the picture stayed identical, so never infer framing changes from Pan numbers alone; compare stills.
 - Matching: if there's an exact match for the line (what's named, the person talked about), use it. If not, use whatever fits the line without creating a misunderstanding (never a shot that implies something false). A line about a specific room or light must show that room if it's shown at all.
 - People: confirm identity (shot log people registry). The first and last ~0.3 s must not freeze on a wide-open mouth or grimace; nudge up to ±0.5 s inside the steady window (`scripts/mouth_check.py`). Goofy or playful moments only where the concept allows it; ask in the opening grilling.
 - Light spots: a small blown highlight is fine. Reject or shorten a shot when the hot spot is a significant part of the frame or the shot lingers on it (C7 R14).
@@ -64,11 +64,30 @@ The card shows a 6-frame filmstrip of the 9:16 window, a first/last onion skin, 
 
 1. Slide to a steadier part of the same clip, or re-pick another window of the same subject; re-score it.
 2. Stabilise with Gyroflow: colour the clip Orange and add a clip marker whose custom data is `{"gyroflow": {"smoothness": .., "horizon": .., "horizon_amount": .., "horizon_roll": .., "zoom_mode": "Dynamic", "zoom_window": 4, "max_zoom": ..}}`. Presets: static 0.3 + horizon lock; slow gimbal push/slide/orbit 0.5 + horizon lock; tilt reveals 0.5 + roll-only lock; handheld follow / walk-and-talk 0.8, no horizon lock. Tim's script (Workspace > Scripts > Utility > "Gyroflow Stabilize Flagged") stabilises at 100%, re-applies speed and retime settings, renders next to the source clip, places it on a "Gyroflow" track, disables the original and colours the new clip Yellow.
+   - `horizon_amount` is a percentage (100 = full lock; 1.0 means 1%, effectively off). `max_zoom` is a % limit the script only passes on above 50; use 0 for no limit.
    - Reframe first, Gyroflow second: the script copies Pan, Tilt, Zoom and crop onto the stabilised clip. It refuses camera files with no gyro data (REQUIRE_GYRO), so only flag shots whose file has motion data (Sony rtmd track) and list the rest for Tim.
+   - Check verticals after stabilising: horizon lock levels the gyro horizon, not the room, so a shot can still lean 1-1.5 deg. Level it with RotationAngle and the smallest zoom that hides the corners (Tim, Green C3: zoom 1.06-1.09 for 1.0-1.4 deg) [Tim, 29 Oct 2026].
+   - After stabilising, re-check framing on every shot (orig vs stab 9:16 crop at first/mid/last): the stabilisation zoom shifts and tightens the frame, so re-centre with Pan on the stabilised clip; horizon lock can add roll to an already-level upward shot (re-render with horizon off); some clips crop ~1.4x whatever the settings: Tim still prefers the stabilised version over a wider shaky one (Green C3 C9995, 29 Oct 2026), so keep it and re-centre with Pan rather than reverting.
    - When Tim asks for Gyroflow on all B-roll, flag every gyro-capable B-roll shot Orange with a preset marker, not only the shaky ones.
 3. If still shaky: slow to ~50% with Optical Flow + Speed Warp Better.
 4. If still shaky: ~30%, only if the subject doesn't move strangely.
 5. Replace with a different clip.
+
+## Stage 5b. Measure the rendered result (stabilisation loop)
+
+Judge what the viewer sees: render the timeline at 1080x1920 H.264 to the shoot's `_claude_scratch/proxy` (save Tim's render settings as a temporary preset first, restore and delete it after, and delete your jobs), then run `scripts/shake_check.py RENDER.mp4 SHOTS.json OUT` (SHOTS = [{"shot", "start", "dur"}] in timeline frames).
+- Calibrated on synthetic shake (Green, 29 Oct 2026): floor ~0.2 px p90 at 1080 wide; +1 px random shake reads ~1.6; +2 px ~3.2; an accelerating pan stays ~0.2. Tiers: < 1.0 pass, 1.0-1.6 check, >= 1.6 fix.
+- It tracks only low-change background (moving people masked) with a Savitzky-Golay (9/2) detrend. Hands or bodies filling the frame can still inflate it: confirm every fix/check by eye (flipbooks with a fixed grid, 2x crops, slit-scans of a static column, hand-tracked background points), with an independent second look.
+- Also read the frame-difference spikes: one-frame lighting jumps (a light switching on), dropped frames, held first frames.
+
+What fixed shots on Green C5/C7 (29 Oct 2026):
+- Gyroflow can ADD shake on clips that already had in-body/lens stabilisation (C1345: camera 0.2 px, Gyroflow render 2.7 px). Compare the render with the camera file; if the original is steadier, use the original.
+- 25p clips at 100% on a 24p timeline drop one frame a second (visible hitch on moves): set 96% with Retime Nearest so every frame plays once.
+- Speed Warp smears hands crossing the frame or touching the face: slip the window past the hand rather than changing the retime.
+- Residual low-frequency sway: re-render Gyroflow at smoothness 0.8-0.9 + horizon lock (C7 2474: 1.75 -> 0.2 px).
+- Walking bob (camera translation) and roll that horizon lock won't hold can't be fixed by Gyroflow: re-pick a calmer window (100 fps clips can drop to ~25% with no invented frames) or replace the shot with a static/tripod one that fits the line.
+- Resolve's TimelineItem.Stabilize() runs from scripts but uses the clip's Inspector settings (mode/smooth/strength are not scriptable); at defaults it added nothing measurable on top of Gyroflow.
+- Rebuilding a clip (no trim API): read Pan/Tilt/Zoom/Rotation, re-append, re-apply, then confirm framing with a still; Pan readback has been inconsistent between clips and timelines. ExportCurrentFrameAsStill fails on the Deliver page (OpenPage('edit') first).
 
 ## Stage 6. Re-measure and sign-off
 

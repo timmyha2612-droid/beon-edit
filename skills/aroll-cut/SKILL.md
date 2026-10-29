@@ -25,7 +25,8 @@ The aim above everything: the speech flows smoothly and sounds natural, not rush
 - Never clip a word at the start or end of a piece. Whisper word times drift up to 0.3 s: snap every edge to a real energy gap between words.
 - Tone: don't end a piece on a still-talking (rising or level) tone when the next piece starts a new thought. A continuing tone is fine when the next piece carries on the same sentence (C7: "dramatically | light-filled, | large living areas").
 - Remove silent mid-sentence gaps of about 0.3 s or more (hesitations). Keep pauses that read as natural phrasing (commas, sentence ends). On C7 Tim removed 8 gaps of 0.17–0.42 s; speech went from 80.1 s to 74.0 s.
-- Air at joins: about 0.10 s before the first word and 0.15 s after the last, about 0.28 s of silence across a join.
+- Start on the word, not the breath [Tim, Green Oct C3, 29 Oct 2026]: an in-breath, mouth click or breathy "I" before the first word is not air. Cut it and start ~0.05 s before the word (C3: 158.6-159.2 s click+breath, 176.0-176.3 s breathy "I"). Energy-threshold air checks count breaths as speech, so look at the contour: a low separate blob before the word is a breath.
+- Air at joins (house default; some clients run tighter, see the client profile): about 0.10 s before the first word and 0.15 s after the last, about 0.28 s of silence across a join.
 - Jokes: follow what the grilling decided. Default when unsure: keep the speaker on camera across the joke.
 - Measure with `scripts/cut_air.py` (head/tail air and inner pauses per piece) and fix outliers before handing over.
 
