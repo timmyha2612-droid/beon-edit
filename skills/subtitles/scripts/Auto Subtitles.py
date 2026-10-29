@@ -432,6 +432,9 @@ def build(resolve, project, timeline, caps, log, style=None):
             leftovers += subs.GetItemListInTrack(kind, t) or []
     if leftovers:
         subs.DeleteClips(leftovers, False)
+    # One video track only: with more, Resolve's track targeting can drop the titles onto V2+.
+    for t in range(subs.GetTrackCount("video"), 1, -1):
+        subs.DeleteTrack("video", t)
     log(f"Building {len(caps)} captions on '{name}'...")
 
     # Inserting a title splits the previous one and pushes its tail along; removing the tail

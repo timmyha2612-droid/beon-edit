@@ -41,6 +41,9 @@ def step_dup(name):
             items += dup.GetItemListInTrack(kind, t) or []
     if items:
         dup.DeleteClips(items, False)
+    # One video track only: with more, Resolve's track targeting can drop the titles onto V2+.
+    for t in range(dup.GetTrackCount("video"), 1, -1):
+        dup.DeleteTrack("video", t)
     left = sum(len(dup.GetItemListInTrack(k, t) or []) for k in ("video", "audio") for t in range(1, dup.GetTrackCount(k) + 1))
     return {"dup": dup.GetName(), "cleared": len(items), "left": left}
 

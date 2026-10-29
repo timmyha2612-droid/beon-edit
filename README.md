@@ -32,3 +32,4 @@ Rules were learned from Namir Mikha C6, C1 and C7 and reviewed by Tim on the "Ti
 0.4.0 (15 Oct 2026, after Tim's answers): client style profiles (Namir, Arriva), render check on a proxy render, recut-on-a-copy tools, CrisperWhisper verbatim transcription (installed in the VM; model and commercial licence pending), glued-filler cuts located by the change in the sound, clipped-audio warning with the safety channel.
 
 0.5.0 (29 Oct 2026, Beon SEO shorts): subtitles skill. Fluid Reveal Words / Fluid Reveal titles, style test first (Tim styles one title, every caption copies it), never several words at once (4-frame min gap), no gaps, clean verbatim, Auto Subtitles now handles camera clips (source timecode, 25p on 24p) and waits for the playhead.
+0.5.1 (29 Oct 2026): subtitles timeline keeps one video track (titles were landing on V2 when the source timeline had several tracks); tested style copy (Metropolis 0.06) on Green Oct2 C3.

@@ -76,6 +76,7 @@ Work in a folder (`WORK`, e.g. the shoot's `_claude_scratch/subs`, never Dropbox
 - **Never `CreateEmptyTimeline` or `SetSetting` from a script.** They deadlock Resolve 21.1 (SyncProjectSettings). Always `DuplicateTimeline`, then delete the clips.
 - `InsertFusionTitleIntoTimeline` is a ripple insert at the playhead on V1: it splits the previous title and pushes its tail along. Delete the tails after each insert, and trim the end by inserting one more title at the end and deleting it.
 - **The playhead lags** `SetCurrentTimecode`, worst right after switching timelines. Set it, poll `GetCurrentTimecode` until it matches, and assert where each title landed. C4a was built in the wrong places before this rule.
+- The duplicated subtitles timeline must keep **one video track**: with several, Resolve's track targeting drops the titles on V2 and the tail clean-up misses them (Green Oct2 C3). `step_dup` and Auto Subtitles delete the extra tracks.
 - Wait after `SetCurrentTimeline` until `GetCurrentTimeline()` reports the new one.
 - `AppendToTimeline` startFrame/endFrame are frames *inside the subtitles timeline* (0..length); recordFrame is the main timeline's start.
 - Transcript words carry the **clip's own timecode**: subtract the clip's Start TC, and scale by timeline fps / clip fps (25p camera on a 24p timeline).
