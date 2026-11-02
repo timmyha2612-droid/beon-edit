@@ -75,6 +75,10 @@ How to cut one out so the speech still flows:
 ## 3. Picture on the A-roll
 
 - Single-camera interviews alternate Zoom 1.0 and 1.35 (with pan and tilt to keep the face placed) on the visible pieces, so cuts read as angle changes. Land the conclusion in the close-up. C7 framing: medium Zoom 1.0 Pan −40; close-up Zoom 1.35 Pan −54 Tilt −150.
+- Centre the speaker in the 9:16 frame on every piece [Tim, Simone Nov C03, 2 Nov 2026]: slide each A-roll piece left or right with Pan so the person (head and upper body) sits in the middle, in the wides and the close-ups. Same rule as B-roll reframing in broll-qaqc. Measure per piece, not once per take: people lean and shift between answers.
+  - Measure the subject x on the source at 30/50/70% of each piece: face centre (Haar) and the upper-body mass (dark hair and clothes against the wall), averaged. The face detector misfires on turned heads (Simone C03h: one face read 0.46 against a body of 0.48), so fall back to the body when the two disagree by more than ~1%.
+  - Pan units are not pixels and differ per timeline: set a test Pan on one wide and one close piece, export a still each, and measure how far the subject moved. Simone (UHD 25p on 1080x1920): 1 Pan unit = 2.28 px at Zoom 1.0 and 3.1 px at Zoom 1.44. Then Pan = (540 − predicted x px) / units-per-px, with predicted x px = 540 + (x − 0.5) × 3413 × zoom.
+  - Check with rendered stills (a vertical centre line on a sheet): body centred within ~2-3% of the width.
 - Jump cuts: cover the visible ones with B-roll or a punch-in change. Leave a cut uncovered when the audio flows and the jump is small (head moves under ~1% of the frame), or when covering it would leave only a sliver of the speaker between two B-roll shots. Check with `learn-from-tim/scripts/jumpcut_check.py`.
 - Keep on-camera windows inside one piece where possible (no slivers).
 
