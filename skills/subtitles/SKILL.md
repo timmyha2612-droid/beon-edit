@@ -15,6 +15,7 @@ Word-by-word subtitles that rise in as each word is spoken. Built on 28 Oct 2026
 |---|---|
 | `assets/Fluid Reveal Words.setting` | The word-by-word title (12 word layers, Garet Book, hidden `Main.WordTime1..12` for per-word timing, AE-style In/Out curves). Approved C2a look as defaults. |
 | `assets/Fluid Reveal.setting` | Letter-by-letter version of the same reveal. |
+| `assets/Fluid Reveal Words Hook.setting` | Hook version of Fluid Reveal Words: same reveal and timing, plus a per-word highlight (accent colour, extra weight, pop). For video hooks only; normal subtitles stay on Fluid Reveal Words. |
 | `scripts/install.sh` | Copies both titles and the two Resolve scripts into Resolve. Run once per machine, then restart Resolve. |
 | `scripts/build_presets.py OUT_DIR` | Regenerates both `.setting` files (fonts, default curves, write-on maths). Edit this, never the `.setting` by hand. |
 | `scripts/Auto Subtitles.py` | Workspace > Scripts > Edit. One click: transcribe A1, caption, build, place on a new top track. |
@@ -64,6 +65,19 @@ Work in a folder (`WORK`, e.g. the shoot's `_claude_scratch/subs`, never Dropbox
 6. **Check:** `check_lib.stills(name, a, b, tag)` exports one still per caption just before it exits. Run `WORK=… sheet.sh tag` and look at the sheet: text complete, nothing clipped, lines balanced.
 7. **Verify words** (optional, batches): render each short's audio, then `whisper-cli -m ~/whisper-models/ggml-large-v3.bin -oj -of WORK/verify/<tag> <wav>`, then `python3 compare_whisper.py WORK`. Review each difference; most are intentional clean-ups.
 8. Write a proofreading list for Tim (caption number, text) next to the edit notes.
+
+## Hook captions (Fluid Reveal Words Hook)
+
+For the opening hook of a video (built 3 Nov 2026 on C1 HERO v6): the strong word or phrase in each caption pops in the accent colour.
+
+- **How it works:** same group name (`FluidRevealWords`), `Main` node and `WordTime1..12` as Fluid Reveal Words, so build_lib, Resync and the planner work unchanged. Every word layer (`W1..W12`) is an instance of a hidden template `Txt1`, so a highlighted word can change colour without touching the base colour.
+- **Per-word switch:** `Main.Hi1..12` (also on the title's Highlight page): 0 off, 1 highlight, 2 slam (double pop, for the one payoff word, e.g. "MORE important").
+- **Highlight look:** accent colour = `Main.TopLeftRed/Green/Blue` (Highlight Color picker, default warm yellow 1/0.82/0.25), extra weight = outline in the same colour (`HiWeight` 0.02, it never shifts the layout, unlike a Garet Heavy swap), pop = Text+ word transform from 1+Hi*PopAmount back to 1 over PopDur, and highlighted words snap in faster (`HiSnap` 1.5) so the pop reads as a punch, not a blur.
+- **Defaults:** PopAmount 0.10, PopDur 6. At 0.18/10, a highlighted word revealed late in a short caption was still enlarged at the exit and ate the space before it ("not foreverybody").
+- **Building:** exec build_lib as usual and set `ns["TITLE"] = "Fluid Reveal Words Hook"` before step_insert/step_trim. After step_config, set per caption: `Hi{k}` (display token numbers, 1-based), speaker colour (Bonnie cream 0.93/0.90/0.84, Jordan white on the Beon SEO job), and for 16:9 Size 0.06, Position (0.5, 0.2). Keep the highlights and speakers in a side file (e.g. `WORK/hook_extra.json`).
+- **Hook only:** cap the last caption at the end of the hook speech (copy words.json with `end` = start + hook frames before planning), or the planner runs it to the end of the long-form.
+- **Rules:** one strong word or phrase per caption, never more than one slam per hook, and Tim's 4-frame reveal gap still applies.
+- **Gotchas found building it:** `comp.Execute()` runs Lua asynchronously, so read results back after a sleep. Pasting a macro into a timeline title's comp from a script doesn't stick; install the .setting and use `InsertFusionTitleIntoTimeline` instead. Resolve picked up a newly installed title without a restart. A Text+ shading element switched on by script has `Size2 = 0` and draws nothing, so set Size/SizeX/SizeY to 1.
 
 ## After Tim edits
 

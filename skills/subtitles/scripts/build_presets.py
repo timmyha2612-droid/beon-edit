@@ -284,10 +284,37 @@ def write_on(k, which, last):
     return f"({b} and ({chars_before(b, skip_newlines=(which == 3))}{pad}) or {NCH})/math.max({NCH},1)"
 
 
-def build_words():
+def hook_word_inputs(k, start, c="Main"):
+    """Hook preset: per-word highlight driven by Main.Hi{k} (0 off, 1 highlight, 2 slam).
+    Colour and outline (extra weight without changing the layout) switch to the accent colour
+    held on Main's TopLeft colour; the word pops from a larger size and settles around its own
+    centre (Text+ word transform), so the other words never move."""
+    hi = f"{c}.Hi{k}"
+    pop = (f"1+{hi}*{c}.PopAmount*(1-min(max((time-({start}))/max({c}.PopDur,1),0),1))^2")
+    rows = [f'Red1 = Input {{ Value = 1, Expression = "{hi} > 0 and {c}.TopLeftRed or Txt1.Red1", }}',
+            f'Green1 = Input {{ Value = 1, Expression = "{hi} > 0 and {c}.TopLeftGreen or Txt1.Green1", }}',
+            f'Blue1 = Input {{ Value = 1, Expression = "{hi} > 0 and {c}.TopLeftBlue or Txt1.Blue1", }}',
+            f'Enabled2 = Input {{ Value = 0, Expression = "{hi} > 0 and 1 or 0", }}',
+            f'Thickness2 = Input {{ Value = 0, Expression = "{c}.HiWeight", }}',
+            'Size2 = Input { Value = 1, }',                     # Resolve leaves a script-enabled element at size 0
+            'SizeX2 = Input { Value = 1, }',
+            'SizeY2 = Input { Value = 1, }',
+            f'Red2 = Input {{ Value = 1, Expression = "{c}.TopLeftRed", }}',
+            f'Green2 = Input {{ Value = 1, Expression = "{c}.TopLeftGreen", }}',
+            f'Blue2 = Input {{ Value = 1, Expression = "{c}.TopLeftBlue", }}',
+            f'WordSizeX = Input {{ Value = 1, Expression = "{pop}", }}',
+            f'WordSizeY = Input {{ Value = 1, Expression = "{pop}", }}']
+    return "".join(f"\t\t\t\t\t\t{r},\n" for r in rows)
+
+
+def build_words(hook=False):
     c = "Main"
     tools = lut("InCurveLookup", WORDS_IN_LUT)
     merges_prev = "Clear"
+    if hook:
+        # Txt1 is only the style template here (not rendered): every word, including the first,
+        # is an instance, so a highlighted word can override its colour without touching the base.
+        tools += text_plus("Txt1", '\t\t\t\t\t\tStyledText = Input { Value = "It makes it MORE important.", },\n', "", WORDS_FONT)
     for k in range(1, MAX_WORDS + 1):
         last = k == MAX_WORDS
         # Word k starts at its spoken frame (WordTimeK, set by Auto Subtitles) or, when that is
@@ -299,16 +326,27 @@ def build_words():
             tools += curve("InCurve1", "InCurveLookup", p)
         else:
             tools += curve(cname, None, p, instance_of="InCurve1")
-        tools += expr_mod(f"WordFx{k}",
-                          {"n1": f'Input {{ SourceOp = "{cname}", Source = "Value", }}',
-                           "n2": f'Input {{ Value = 0.02, Expression = "{c}.Rise", }}'},
-                          number="min(max(n1,0),1)", px="0.5", py="0.5-n2*(1-n1)")
+        if hook:
+            # Highlighted words snap in faster (and so lose their blur sooner) while they pop.
+            tools += expr_mod(f"WordFx{k}",
+                              {"n1": f'Input {{ SourceOp = "{cname}", Source = "Value", }}',
+                               "n2": f'Input {{ Value = 0.02, Expression = "{c}.Rise", }}',
+                               "n3": f'Input {{ Value = 0, Expression = "{c}.Hi{k} > 0 and {c}.HiSnap or 0", }}'},
+                              number="min(max(n1*(1+n3),0),1)", px="0.5", py="0.5-n2*(1-min(max(n1*(1+n3),0),1))")
+        else:
+            tools += expr_mod(f"WordFx{k}",
+                              {"n1": f'Input {{ SourceOp = "{cname}", Source = "Value", }}',
+                               "n2": f'Input {{ Value = 0.02, Expression = "{c}.Rise", }}'},
+                              number="min(max(n1,0),1)", px="0.5", py="0.5-n2*(1-n1)")
         wo = (f'\t\t\t\t\t\tStart = Input {{ Value = 0, Expression = "{write_on(k, 3, last)}", }},\n'
               f'\t\t\t\t\t\tEnd = Input {{ Value = 1, Expression = "{write_on(k, 4, last)}", }},\n')
-        if k == 1:
+        layer = f"W{k}" if hook else f"Txt{k}"
+        if hook:
+            wo += hook_word_inputs(k, start, c)
+        if k == 1 and not hook:
             tools += text_plus("Txt1", '\t\t\t\t\t\tStyledText = Input { Value = "Search is changing.", },\n', wo, WORDS_FONT)
         else:
-            tools += f"""\t\t\t\tTxt{k} = TextPlus {{
+            tools += f"""\t\t\t\t{layer} = TextPlus {{
 \t\t\t\t\tSourceOp = "Txt1",
 \t\t\t\t\tInputs = {{
 \t\t\t\t\t\tSettingsNest = Input(),
@@ -321,7 +359,7 @@ def build_words():
 \t\t\t\t\tInputs = {{
 \t\t\t\t\t\tFilter = Input {{ Value = FuID {{ "Gaussian" }}, }},
 \t\t\t\t\t\tXBlurSize = Input {{ Value = 0, Expression = "max(0, {c}.InBlur*(1-WordMerge{k}.Blend))", }},
-\t\t\t\t\t\tInput = Input {{ SourceOp = "Txt{k}", Source = "Output", }},
+\t\t\t\t\t\tInput = Input {{ SourceOp = "{layer}", Source = "Output", }},
 \t\t\t\t\t}},
 \t\t\t\t}},
 \t\t\t\tWordMerge{k} = Merge {{
@@ -342,6 +380,21 @@ def build_words():
         f'\t\t\t\t\t\tWordTime{k} = {{ LINKS_Name = "Word {k} Time (frames, -1 = auto)", LINKID_DataType = "Number", '
         f'INPID_InputControl = "SliderControl", INP_Default = -1, INP_MinScale = -1, INP_MaxScale = 120, INP_MinAllowed = -1, '
         f'IC_Visible = false, ICS_ControlPage = "Controls" }},\n' for k in range(1, MAX_WORDS + 1))
+    if hook:
+        # Accent = Main's own TopLeft colour (warm highlighter yellow by default).
+        word_time_inputs += ("\t\t\t\t\t\tTopLeftRed = Input { Value = 1, },\n\t\t\t\t\t\tTopLeftGreen = Input { Value = 0.82, },\n"
+                             "\t\t\t\t\t\tTopLeftBlue = Input { Value = 0.25, },\n\t\t\t\t\t\tPopAmount = Input { Value = 0.10, },\n"
+                             "\t\t\t\t\t\tPopDur = Input { Value = 6, },\n\t\t\t\t\t\tHiWeight = Input { Value = 0.02, },\n"
+                             "\t\t\t\t\t\tHiSnap = Input { Value = 1.5, },\n")
+        word_time_inputs += "".join(f"\t\t\t\t\t\tHi{k} = Input {{ Value = 0, }},\n" for k in range(1, MAX_WORDS + 1))
+        word_time_controls += (slider("PopAmount", "Highlight Pop (extra size at reveal)", 0.10, 0, 0.6, 0)
+                               + slider("PopDur", "Highlight Pop Settle (frames)", 6, 1, 30, 1)
+                               + slider("HiWeight", "Highlight Weight (outline)", 0.02, 0, 0.1, 0)
+                               + slider("HiSnap", "Highlight Snap (faster reveal)", 1.5, 0, 4, 0))
+        word_time_controls += "".join(
+            f'\t\t\t\t\t\tHi{k} = {{ LINKS_Name = "Highlight Word {k} (0 off, 1 on, 2 slam)", LINKID_DataType = "Number", '
+            f'INPID_InputControl = "SliderControl", INP_Default = 0, INP_MinScale = 0, INP_MaxScale = 2, INP_MinAllowed = 0, '
+            f'INP_MaxAllowed = 2, INP_Integer = true, ICS_ControlPage = "Controls" }},\n' for k in range(1, MAX_WORDS + 1))
     # Unconnected node that only holds the animation sliders the expressions read.
     tools += f"""\t\t\t\tMain = Background {{
 \t\t\t\t\tCtrlWZoom = false,
@@ -379,9 +432,20 @@ def build_words():
 \t\t\t\tOutBlur = InstanceInput {{ SourceOp = "{c}", Source = "OutBlur", Default = 12 }},
 """
     )
+    if hook:
+        inputs += (f'\t\t\t\tHiRed = InstanceInput {{ SourceOp = "{c}", Source = "TopLeftRed", Name = "Highlight Color", ControlGroup = 7, Default = 1, Page = "Highlight" }},\n'
+                   f'\t\t\t\tHiGreen = InstanceInput {{ SourceOp = "{c}", Source = "TopLeftGreen", ControlGroup = 7, Default = 0.82, Page = "Highlight" }},\n'
+                   f'\t\t\t\tHiBlue = InstanceInput {{ SourceOp = "{c}", Source = "TopLeftBlue", ControlGroup = 7, Default = 0.25, Page = "Highlight" }},\n'
+                   f'\t\t\t\tPopAmount = InstanceInput {{ SourceOp = "{c}", Source = "PopAmount", Default = 0.10, Page = "Highlight" }},\n'
+                   f'\t\t\t\tPopDur = InstanceInput {{ SourceOp = "{c}", Source = "PopDur", Default = 6, Page = "Highlight" }},\n'
+                   f'\t\t\t\tHiWeight = InstanceInput {{ SourceOp = "{c}", Source = "HiWeight", Default = 0.02, Page = "Highlight" }},\n'
+                   f'\t\t\t\tHiSnap = InstanceInput {{ SourceOp = "{c}", Source = "HiSnap", Default = 1.5, Page = "Highlight" }},\n')
+        inputs += "".join(f'\t\t\t\tHi{k} = InstanceInput {{ SourceOp = "{c}", Source = "Hi{k}", Default = 0, Page = "Highlight" }},\n'
+                          for k in range(1, MAX_WORDS + 1))
     return wrap("FluidRevealWords", inputs, tools)
 
 
 open(f"{OUT_DIR}/Fluid Reveal.setting", "w").write(build_letters())
 open(f"{OUT_DIR}/Fluid Reveal Words.setting", "w").write(build_words())
+open(f"{OUT_DIR}/Fluid Reveal Words Hook.setting", "w").write(build_words(hook=True))
 print("ok")
