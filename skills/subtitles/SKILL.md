@@ -16,6 +16,8 @@ Word-by-word subtitles that rise in as each word is spoken. Built on 28 Oct 2026
 | `assets/Fluid Reveal Words.setting` | The word-by-word title (12 word layers, Garet Book, hidden `Main.WordTime1..12` for per-word timing, AE-style In/Out curves). Approved C2a look as defaults. |
 | `assets/Fluid Reveal.setting` | Letter-by-letter version of the same reveal. |
 | `assets/Fluid Reveal Words Hook.setting` | Hook version of Fluid Reveal Words: same reveal and timing, plus a per-word highlight (accent colour, extra weight, pop). For video hooks only; normal subtitles stay on Fluid Reveal Words. |
+| `assets/Fluid Reveal Words Kinetic.setting` | Kinetic (editorial) hook title: every word on its own layer in Libre Baskerville, key words in true italic, clean fade-rise-unblur reveal, soft shadow. Tim's preferred hook look. |
+| `scripts/kinetic_layout.py`, `scripts/kinetic_apply.py` | Typeset Kinetic captions as stacked blocks in each shot's negative space (HarfBuzz, ink-aware italics) and push the layout into the titles. |
 | `scripts/install.sh` | Copies both titles and the two Resolve scripts into Resolve. Run once per machine, then restart Resolve. |
 | `scripts/build_presets.py OUT_DIR` | Regenerates both `.setting` files (fonts, default curves, write-on maths). Edit this, never the `.setting` by hand. |
 | `scripts/Auto Subtitles.py` | Workspace > Scripts > Edit. One click: transcribe A1, caption, build, place on a new top track. |
@@ -78,6 +80,18 @@ For the opening hook of a video (built 3 Nov 2026 on C1 HERO v6): the strong wor
 - **Hook only:** cap the last caption at the end of the hook speech (copy words.json with `end` = start + hook frames before planning), or the planner runs it to the end of the long-form.
 - **Rules:** one strong word or phrase per caption, never more than one slam per hook, and Tim's 4-frame reveal gap still applies.
 - **Gotchas found building it:** `comp.Execute()` runs Lua asynchronously, so read results back after a sleep. Pasting a macro into a timeline title's comp from a script doesn't stick; install the .setting and use `InsertFusionTitleIntoTimeline` instead. Resolve picked up a newly installed title without a restart. A Text+ shading element switched on by script has `Size2 = 0` and draws nothing, so set Size/SizeX/SizeY to 1.
+
+## Kinetic hook captions (Fluid Reveal Words Kinetic)
+
+Tim's preferred hook look (built 3 Nov 2026 on C1 HERO v6): white Libre Baskerville, sentence case, key words in true italic, 1-3 word captions stacked on up to 2 lines in the negative space beside the speaker. Reference: "Is your business *keeping up?*". **Never yellow** and **no bounce/pop**: he rejected both ("dont use yellow", "i dont like that pop up ... apple clean style").
+
+- **Why per-word layers:** Character Level Styling (italic on some words of one Text+) can't be scripted (`CharacterLevelStyling` reads back as a string, table writes are ignored). So each `W{k}` has its own StyledText / Style / Center, and `kinetic_layout.py` sets them from the font's real metrics.
+- **Reveal:** each word fades in over `SnapIn` (Fade In, 8 frames) with an ease-out cubic, rises `Rise` 0.01 and clears `InBlur` 6. `Bounce` > 0 brings the CapCut spring back if ever wanted (default 0). Captions hard-swap (OutDur 0). Key-word colour defaults to white.
+- **Calibration (Resolve 21.1):** 1 em = Text+ Size x frame width x 0.6451; Text+ centres the advance box; its centre sits 0.35 em above the baseline (Regular and Italic share hhea metrics). Italic is ~11% narrower, and its overhang closes up the next space ("for*everybody*"), so spacing is ink-aware (`MIN_INK_GAP` 0.22 em).
+- **Placement:** first pick one framing per angle for the whole hook (Zoom/Pan on the V2 shots and the V1 multicam under any gap; Pan is in px of a 3840 frame, positive moves the picture right, max pan = (zoom-1) x 1920). C1 HERO: zoom 1.25 on all, Jordan pan +400 (text on the left wall), Bonnie pan -450 (text on the wall behind her, right-aligned), wide pan 0 (text centred above their heads). Tim prefers punch-in on the wide to lose the softboxes.
+- **Workflow:** (1) build titles with build_lib, `ns["TITLE"] = "Fluid Reveal Words Kinetic"`, `subs_name = n + " Kinetic Subtitles"`. (2) `WORK/captions.py` holds `CAPTIONS` plus `KEYS = {caption index: {token number: 1 italic | 2 italic slam}}`; `WORK/blocks.py` holds `BLOCKS = {name: [(start, end, x, y, align, max_width), ...]}` per stretch of the edit (C1: Jordan (0.07, 0.56, left, 0.34), Bonnie (0.93, 0.56, right, 0.30), wide (0.5, 0.72, center, 0.5)). (3) `hb/bin/python kinetic_layout.py WORK` (venv with uharfbuzz + fonttools). (4) with the subtitle timeline current, exec `kinetic_apply.py` with `NAME`, `A`, `B`, about 8 titles per call. (5) stills of every caption fully revealed + contact sheet.
+- **Captions crossing a cut** take the block covering most of their time and are gated to that shot (`show` window), so text never lands on the wrong angle; it leaves at the cut.
+- **Gotchas:** never put an expression on a W layer's `Size` (instanced from Txt1): it loops and the whole nested frame renders black. Scale slam / shrink-to-fit words through `WordSizeX/Y`. `GetInput` on an expression-driven input returns None; verify with stills, not read-backs. `SetInput` on an instanced input is ignored. Resolve crashes if Fusion edits are sent as parallel calls.
 
 ## After Tim edits
 

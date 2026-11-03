@@ -307,14 +307,53 @@ def hook_word_inputs(k, start, c="Main"):
     return "".join(f"\t\t\t\t\t\t{r},\n" for r in rows)
 
 
-def build_words(hook=False):
+def kinetic_word_inputs(k, start, c="Main"):
+    """Kinetic (CapCut-style) preset: each word springs in (about 70% -> 110% -> 100%), the word
+    being spoken lights up in the accent colour (karaoke), and key words (Hi{k} 1, slam 2) stay
+    coloured and slightly bigger. Outline and shadow come from the Txt1 template."""
+    hi = f"{c}.Hi{k}"
+    nxt = (f"({c}.WordTime{k + 1} >= 0 and ({c}.WordTime{k + 1}+{c}.SyncOffset) or 100000)"
+           if k < MAX_WORDS else "100000")
+    on = f"({hi} > 0 or ({c}.Karaoke > 0.5 and time >= ({start}) and time < {nxt}))"
+    pp = f"math.max((time-({start}))/math.max({c}.PopDur,1),0)"
+    size = f"(1-{c}.Bounce*(1+0.5*{hi})*math.exp(-3.5*{pp})*math.cos(9*{pp}))*(1+{hi}*{c}.KeyHold)"
+    rows = [f'Red1 = Input {{ Value = 1, Expression = "{on} and {c}.TopLeftRed or Txt1.Red1", }}',
+            f'Green1 = Input {{ Value = 1, Expression = "{on} and {c}.TopLeftGreen or Txt1.Green1", }}',
+            f'Blue1 = Input {{ Value = 1, Expression = "{on} and {c}.TopLeftBlue or Txt1.Blue1", }}',
+            f'WordSizeX = Input {{ Value = 1, Expression = "{size}", }}',
+            f'WordSizeY = Input {{ Value = 1, Expression = "{size}", }}']
+    return "".join(f"\t\t\t\t\t\t{r},\n" for r in rows)
+
+
+# Kinetic template look: dark outline (element 2) and soft drop shadow (element 3) on every word.
+# Elements switched on by script start at size 0, so their sizes are set explicitly.
+KINETIC_TEMPLATE = "".join(f"\t\t\t\t\t\t{r},\n" for r in [
+    'Size = Input { Value = 0.075, }',
+    'CharacterSpacing = Input { Value = 1, }',   # word positions are typeset at tracking 1.0
+    'Enabled2 = Input { Value = 0, Expression = "Main.Outline > 0 and 1 or 0", }',
+    'Size2 = Input { Value = 1, }', 'SizeX2 = Input { Value = 1, }', 'SizeY2 = Input { Value = 1, }',
+    'Thickness2 = Input { Value = 0.06, Expression = "Main.Outline", }',
+    'Red2 = Input { Value = 0, }', 'Green2 = Input { Value = 0, }', 'Blue2 = Input { Value = 0, }',
+    'Enabled3 = Input { Value = 1, }', 'Size3 = Input { Value = 1, }', 'SizeX3 = Input { Value = 1, }', 'SizeY3 = Input { Value = 1, }',
+    'Red3 = Input { Value = 0, }', 'Green3 = Input { Value = 0, }', 'Blue3 = Input { Value = 0, }',
+    'Alpha3 = Input { Value = 0.6, Expression = "Main.ShadowAlpha", }',
+    'Offset3 = Input { Value = { 0.004, -0.012 }, }',
+    'SoftnessX3 = Input { Value = 4, Expression = "Main.ShadowSoft", }',
+    'SoftnessY3 = Input { Value = 4, Expression = "Main.ShadowSoft", }',
+])
+
+
+def build_words(hook=False, kinetic=False):
     c = "Main"
     tools = lut("InCurveLookup", WORDS_IN_LUT)
     merges_prev = "Clear"
-    if hook:
+    templated = hook or kinetic
+    if templated:
         # Txt1 is only the style template here (not rendered): every word, including the first,
         # is an instance, so a highlighted word can override its colour without touching the base.
-        tools += text_plus("Txt1", '\t\t\t\t\t\tStyledText = Input { Value = "It makes it MORE important.", },\n', "", WORDS_FONT)
+        sample = "Is your business keeping up?" if kinetic else "It makes it MORE important."
+        tools += text_plus("Txt1", f'\t\t\t\t\t\tStyledText = Input {{ Value = "{sample}", }},\n',
+                           KINETIC_TEMPLATE if kinetic else "", ("Libre Baskerville", "Regular") if kinetic else WORDS_FONT)
     for k in range(1, MAX_WORDS + 1):
         last = k == MAX_WORDS
         # Word k starts at its spoken frame (WordTimeK, set by Auto Subtitles) or, when that is
@@ -326,7 +365,14 @@ def build_words(hook=False):
             tools += curve("InCurve1", "InCurveLookup", p)
         else:
             tools += curve(cname, None, p, instance_of="InCurve1")
-        if hook:
+        if kinetic:
+            # Clean reveal: each word fades in over SnapIn frames with an ease-out cubic, rising a
+            # touch and un-blurring (InBlur) as it settles. Bounce > 0 adds the spring pop back.
+            tools += expr_mod(f"WordFx{k}",
+                              {"n1": f'Input {{ Value = 0, Expression = "1-(1-min(max((time-({start}))/max({c}.SnapIn,1),0),1))^3", }}',
+                               "n2": f'Input {{ Value = 0, Expression = "{c}.Rise", }}'},
+                              number="n1", px="0.5", py="0.5-n2*(1-n1)")
+        elif hook:
             # Highlighted words snap in faster (and so lose their blur sooner) while they pop.
             tools += expr_mod(f"WordFx{k}",
                               {"n1": f'Input {{ SourceOp = "{cname}", Source = "Value", }}',
@@ -340,10 +386,16 @@ def build_words(hook=False):
                               number="min(max(n1,0),1)", px="0.5", py="0.5-n2*(1-n1)")
         wo = (f'\t\t\t\t\t\tStart = Input {{ Value = 0, Expression = "{write_on(k, 3, last)}", }},\n'
               f'\t\t\t\t\t\tEnd = Input {{ Value = 1, Expression = "{write_on(k, 4, last)}", }},\n')
-        layer = f"W{k}" if hook else f"Txt{k}"
-        if hook:
+        layer = f"W{k}" if templated else f"Txt{k}"
+        if kinetic:
+            # Typeset per word: the build sets each layer's own word, style (Regular / Italic key
+            # word) and centre from the font's real advances, so mixed styles never collide.
+            wo = ('\t\t\t\t\t\tStyledText = Input { Value = "", },\n'
+                  '\t\t\t\t\t\tStyle = Input { Value = "Regular", },\n'
+                  '\t\t\t\t\t\tCenter = Input { Value = { 0.5, 0.5 }, },\n') + kinetic_word_inputs(k, start, c)
+        elif hook:
             wo += hook_word_inputs(k, start, c)
-        if k == 1 and not hook:
+        if k == 1 and not templated:
             tools += text_plus("Txt1", '\t\t\t\t\t\tStyledText = Input { Value = "Search is changing.", },\n', wo, WORDS_FONT)
         else:
             tools += f"""\t\t\t\t{layer} = TextPlus {{
@@ -395,6 +447,26 @@ def build_words(hook=False):
             f'\t\t\t\t\t\tHi{k} = {{ LINKS_Name = "Highlight Word {k} (0 off, 1 on, 2 slam)", LINKID_DataType = "Number", '
             f'INPID_InputControl = "SliderControl", INP_Default = 0, INP_MinScale = 0, INP_MaxScale = 2, INP_MinAllowed = 0, '
             f'INP_MaxAllowed = 2, INP_Integer = true, ICS_ControlPage = "Controls" }},\n' for k in range(1, MAX_WORDS + 1))
+    if kinetic:
+        kin = [("Karaoke", "Light Up Spoken Word (0/1)", 0, 0, 1), ("Bounce", "Bounce Pop (0 = clean fade)", 0, 0, 0.6),
+               ("PopDur", "Bounce Length (frames)", 10, 1, 30), ("KeyHold", "Key Word Extra Size", 0, 0, 0.3),
+               ("SnapIn", "Fade In (frames)", 8, 1, 24), ("Outline", "Outline Thickness", 0, 0, 0.2),
+               ("ShadowAlpha", "Shadow Opacity", 0.5, 0, 1), ("ShadowSoft", "Shadow Softness", 6, 0, 20)]
+        # Key-word colour defaults to white: the italic is the highlight (Tim's reference look).
+        word_time_inputs += ("\t\t\t\t\t\tTopLeftRed = Input { Value = 1, },\n\t\t\t\t\t\tTopLeftGreen = Input { Value = 1, },\n"
+                             "\t\t\t\t\t\tTopLeftBlue = Input { Value = 1, },\n")
+        word_time_inputs += "".join(f"\t\t\t\t\t\t{key} = Input {{ Value = {d}, }},\n" for key, _, d, _, _ in kin)
+        # Chunks swap cleanly (no outro); words rise 1% of frame height and clear a light blur
+        # (later keys win in the table).
+        word_time_inputs += ("\t\t\t\t\t\tOutDur = Input { Value = 0, },\n\t\t\t\t\t\tRise = Input { Value = 0.01, },\n"
+                             "\t\t\t\t\t\tInBlur = Input { Value = 6, },\n\t\t\t\t\t\tOutBlur = Input { Value = 0, },\n"
+                             "\t\t\t\t\t\tOutLift = Input { Value = 0, },\n")
+        word_time_inputs += "".join(f"\t\t\t\t\t\tHi{k} = Input {{ Value = 0, }},\n" for k in range(1, MAX_WORDS + 1))
+        word_time_controls += "".join(slider(key, label, d, lo, hi_, lo) for key, label, d, lo, hi_ in kin)
+        word_time_controls += "".join(
+            f'\t\t\t\t\t\tHi{k} = {{ LINKS_Name = "Key Word {k} (0 off, 1 key, 2 slam)", LINKID_DataType = "Number", '
+            f'INPID_InputControl = "SliderControl", INP_Default = 0, INP_MinScale = 0, INP_MaxScale = 2, INP_MinAllowed = 0, '
+            f'INP_MaxAllowed = 2, INP_Integer = true, ICS_ControlPage = "Controls" }},\n' for k in range(1, MAX_WORDS + 1))
     # Unconnected node that only holds the animation sliders the expressions read.
     tools += f"""\t\t\t\tMain = Background {{
 \t\t\t\t\tCtrlWZoom = false,
@@ -442,10 +514,19 @@ def build_words(hook=False):
                    f'\t\t\t\tHiSnap = InstanceInput {{ SourceOp = "{c}", Source = "HiSnap", Default = 1.5, Page = "Highlight" }},\n')
         inputs += "".join(f'\t\t\t\tHi{k} = InstanceInput {{ SourceOp = "{c}", Source = "Hi{k}", Default = 0, Page = "Highlight" }},\n'
                           for k in range(1, MAX_WORDS + 1))
+    if kinetic:
+        inputs += (f'\t\t\t\tHiRed = InstanceInput {{ SourceOp = "{c}", Source = "TopLeftRed", Name = "Highlight Color", ControlGroup = 7, Default = 1, Page = "Kinetic" }},\n'
+                   f'\t\t\t\tHiGreen = InstanceInput {{ SourceOp = "{c}", Source = "TopLeftGreen", ControlGroup = 7, Default = 1, Page = "Kinetic" }},\n'
+                   f'\t\t\t\tHiBlue = InstanceInput {{ SourceOp = "{c}", Source = "TopLeftBlue", ControlGroup = 7, Default = 1, Page = "Kinetic" }},\n')
+        inputs += "".join(f'\t\t\t\t{key} = InstanceInput {{ SourceOp = "{c}", Source = "{key}", Default = {d}, Page = "Kinetic" }},\n'
+                          for key, _, d, _, _ in kin)
+        inputs += "".join(f'\t\t\t\tHi{k} = InstanceInput {{ SourceOp = "{c}", Source = "Hi{k}", Default = 0, Page = "Kinetic" }},\n'
+                          for k in range(1, MAX_WORDS + 1))
     return wrap("FluidRevealWords", inputs, tools)
 
 
 open(f"{OUT_DIR}/Fluid Reveal.setting", "w").write(build_letters())
 open(f"{OUT_DIR}/Fluid Reveal Words.setting", "w").write(build_words())
 open(f"{OUT_DIR}/Fluid Reveal Words Hook.setting", "w").write(build_words(hook=True))
+open(f"{OUT_DIR}/Fluid Reveal Words Kinetic.setting", "w").write(build_words(kinetic=True))
 print("ok")
