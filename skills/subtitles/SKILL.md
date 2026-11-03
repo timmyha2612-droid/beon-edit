@@ -18,7 +18,7 @@ Word-by-word subtitles that rise in as each word is spoken. Built on 28 Oct 2026
 | `assets/Fluid Reveal Words Hook.setting` | Hook version of Fluid Reveal Words: same reveal and timing, plus a per-word highlight (accent colour, extra weight, pop). For video hooks only; normal subtitles stay on Fluid Reveal Words. |
 | `assets/Fluid Reveal Words Kinetic.setting` | Kinetic (editorial) hook title: every word on its own layer in Libre Baskerville, key words in true italic, clean fade-rise-unblur reveal, soft shadow. Tim's preferred hook look. |
 | `scripts/kinetic_layout.py`, `scripts/kinetic_apply.py` | Typeset Kinetic captions as stacked blocks in each shot's negative space (HarfBuzz, ink-aware italics) and push the layout into the titles. |
-| `assets/Beon Name Title.setting` | Two-line name super: big Garet Heavy name over a small letter-spaced Garet Book role line (white, 85% opacity, no colour accent), same clean fade-rise reveal; role follows the name by 6 frames. Controls: Name, Role, Position, Justify, sizes, Line Gap, In/Out. |
+| `assets/Beon Name Title.setting` | Two-line name super: big Garet Book name over a small letter-spaced Garet Book role line (white, 85% opacity, no colour accent, no shadow), same clean fade-rise reveal; role follows the name by 6 frames. Controls: Name, Role, Position, Justify, sizes, Line Gap, In/Out. |
 | `scripts/install.sh` | Copies both titles and the two Resolve scripts into Resolve. Run once per machine, then restart Resolve. |
 | `scripts/build_presets.py OUT_DIR` | Regenerates both `.setting` files (fonts, default curves, write-on maths). Edit this, never the `.setting` by hand. |
 | `scripts/Auto Subtitles.py` | Workspace > Scripts > Edit. One click: transcribe A1, caption, build, place on a new top track. |
@@ -96,7 +96,7 @@ Tim's preferred hook look (built 3 Nov 2026 on C1 HERO v6): white Libre Baskervi
 
 ## Name supers (Beon Name Title)
 
-C1 HERO v6 (3 Nov 2026): "Bonnie / FOUNDER & CEO, BEON MEDIA" over her first post-hook shot (927-982), "Jordan / SEO MANAGER, BEON MEDIA" over his (982-1014), each in the open wall beside them (Bonnie name at (0.56, 0.62), Jordan at (0.07, 0.62), left-justified, Name Size 0.11). Build like the subtitles: duplicate the long-form with build_lib `step_dup` (subs_name = n + " Name Titles"), insert one title per shot at the cut frames (insert one more at the last cut and delete it, to trim), set `Name`/`Role` StyledText and `Name.Center`, then AppendToTimeline the nested timeline onto a free stretch of the subtitles track. Short shots: drop OutDur to ~6 so the title holds long enough.
+C1 HERO v6 (3 Nov 2026): "Bonnie / FOUNDER & CEO" over her first post-hook shot (927-982), "Jordan / SEO MANAGER" over his (982-1014), each in the open wall beside them (Bonnie name at (0.56, 0.62), Jordan at (0.07, 0.62), left-justified, Name Size 0.11). Tim: no shadow, name not Heavy (only Book and Heavy are installed), no company name on the role line. Build like the subtitles: duplicate the long-form with build_lib `step_dup` (subs_name = n + " Name Titles"), insert one title per shot at the cut frames (insert one more at the last cut and delete it, to trim), set `Name`/`Role` StyledText and `Name.Center`, then AppendToTimeline the nested timeline onto a free stretch of the subtitles track. Short shots: drop OutDur to ~6 so the title holds long enough.
 
 ## After Tim edits
 

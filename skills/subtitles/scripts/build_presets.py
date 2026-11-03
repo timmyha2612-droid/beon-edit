@@ -527,19 +527,19 @@ def build_words(hook=False, kinetic=False):
 
 # ---------------------------------------------------------------- name title (Beon Name Title)
 def build_name():
-    """Two-line name super: big Garet Heavy name over a small letter-spaced Garet Book role line.
+    """Two-line name super: big Garet Book name over a small letter-spaced Garet Book role line.
     Same clean reveal as the Kinetic captions (ease-out fade, small rise, blur clearing), the role
     line following the name by Stagger frames, and the shared fade-out on the clip's last frames."""
     c = "Ctl"
     shadow = "".join(f"\t\t\t\t\t\t{r},\n" for r in [
-        'Enabled3 = Input { Value = 1, }', 'Size3 = Input { Value = 1, }', 'SizeX3 = Input { Value = 1, }', 'SizeY3 = Input { Value = 1, }',
+        f'Enabled3 = Input {{ Value = 0, Expression = "{c}.ShadowAlpha > 0 and 1 or 0", }}', 'Size3 = Input { Value = 1, }', 'SizeX3 = Input { Value = 1, }', 'SizeY3 = Input { Value = 1, }',
         'Red3 = Input { Value = 0, }', 'Green3 = Input { Value = 0, }', 'Blue3 = Input { Value = 0, }',
         f'Alpha3 = Input {{ Value = 0.5, Expression = "{c}.ShadowAlpha", }}', 'Offset3 = Input { Value = { 0.004, -0.012 }, }',
         f'SoftnessX3 = Input {{ Value = 6, Expression = "{c}.ShadowSoft", }}', f'SoftnessY3 = Input {{ Value = 6, Expression = "{c}.ShadowSoft", }}'])
     name = ('\t\t\t\t\t\tStyledText = Input { Value = "Bonnie", },\n')
-    role = ('\t\t\t\t\t\tStyledText = Input { Value = "FOUNDER & CEO, BEON MEDIA", },\n')
+    role = ('\t\t\t\t\t\tStyledText = Input { Value = "FOUNDER & CEO", },\n')
     tools = text_plus("Name", name, shadow + "\t\t\t\t\t\tCenter = Input { Value = { 0.68, 0.6 }, },\n"
-                      "\t\t\t\t\t\tHorizontalLeftCenterRight = Input { Value = -1, },\n", ("Garet", "Heavy"))
+                      "\t\t\t\t\t\tHorizontalLeftCenterRight = Input { Value = -1, },\n", ("Garet", "Book"))
     tools = tools.replace("Size = Input { Value = 0.08, }", "Size = Input { Value = 0.11, }")
     r = text_plus("Role", role, shadow + f'\t\t\t\t\t\tCenter = Input {{ Value = {{ 0.68, 0.52 }}, Expression = "Point(Name.Center.X, Name.Center.Y-{c}.Gap)", }},\n'
                   '\t\t\t\t\t\tHorizontalLeftCenterRight = Input { Value = -1, Expression = "Name.HorizontalLeftCenterRight", }\n'.rstrip("\n") + ",\n"
@@ -578,7 +578,7 @@ def build_name():
            ("Rise", "Rise Distance", 0.012, 0, 0.1), ("InBlur", "In Blur", 8, 0, 40),
            ("OutDur", "Out Duration (frames)", 10, 0, 40), ("OutLift", "Out Lift", 0.01, 0, 0.1),
            ("OutBlur", "Out Blur", 10, 0, 40), ("Gap", "Line Gap", 0.085, 0, 0.3),
-           ("ShadowAlpha", "Shadow Opacity", 0.5, 0, 1), ("ShadowSoft", "Shadow Softness", 6, 0, 20)]
+           ("ShadowAlpha", "Shadow Opacity (0 = off)", 0, 0, 1), ("ShadowSoft", "Shadow Softness", 6, 0, 20)]
     tools += f"""\t\t\t\t{c} = Background {{
 \t\t\t\t\tCtrlWZoom = false,
 \t\t\t\t\tNameSet = true,
