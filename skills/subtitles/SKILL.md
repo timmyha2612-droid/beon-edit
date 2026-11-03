@@ -16,7 +16,7 @@ Word-by-word subtitles that rise in as each word is spoken. Built on 28 Oct 2026
 | `assets/Fluid Reveal Words.setting` | The word-by-word title (12 word layers, Garet Book, hidden `Main.WordTime1..12` for per-word timing, AE-style In/Out curves). Approved C2a look as defaults. |
 | `assets/Fluid Reveal.setting` | Letter-by-letter version of the same reveal. |
 | `assets/Fluid Reveal Words Hook.setting` | Hook version of Fluid Reveal Words: same reveal and timing, plus a per-word highlight (accent colour, extra weight, pop). For video hooks only; normal subtitles stay on Fluid Reveal Words. |
-| `assets/Fluid Reveal Words Kinetic.setting` | Kinetic (editorial) hook title: every word on its own layer in Libre Baskerville, key words in true italic, clean fade-rise-unblur reveal, soft shadow. Tim's preferred hook look. |
+| `assets/Fluid Reveal Words Kinetic.setting` | Kinetic (editorial) hook title: every word on its own layer in Libre Baskerville, key words in true italic, clean fade-rise-unblur reveal, no shadow (Tim, 3 Nov). Tim's preferred hook look. |
 | `scripts/kinetic_layout.py`, `scripts/kinetic_apply.py` | Typeset Kinetic captions as stacked blocks in each shot's negative space (HarfBuzz, ink-aware italics) and push the layout into the titles. |
 | `assets/Beon Name Title.setting` | Two-line name super: big Garet Book name over a small letter-spaced Garet Book role line (white, 85% opacity, no colour accent, no shadow), same clean fade-rise reveal; role follows the name by 6 frames. Controls: Name, Role, Position, Justify, sizes, Line Gap, In/Out. |
 | `scripts/install.sh` | Copies both titles and the two Resolve scripts into Resolve. Run once per machine, then restart Resolve. |
@@ -84,7 +84,7 @@ For the opening hook of a video (built 3 Nov 2026 on C1 HERO v6): the strong wor
 
 ## Kinetic hook captions (Fluid Reveal Words Kinetic)
 
-Tim's preferred hook look (built 3 Nov 2026 on C1 HERO v6): white Libre Baskerville, sentence case, key words in true italic, 1-3 word captions stacked on up to 2 lines in the negative space beside the speaker. Reference: "Is your business *keeping up?*". **Never yellow** and **no bounce/pop**: he rejected both ("dont use yellow", "i dont like that pop up ... apple clean style").
+Tim's preferred hook look (built 3 Nov 2026 on C1 HERO v6): white Libre Baskerville, sentence case, key words in true italic, 1-3 word captions stacked on up to 2 lines in the negative space beside the speaker. Reference: "Is your business *keeping up?*". **Never yellow**, **no bounce/pop** and **no shadow**: he rejected both ("dont use yellow", "i dont like that pop up ... apple clean style").
 
 - **Why per-word layers:** Character Level Styling (italic on some words of one Text+) can't be scripted (`CharacterLevelStyling` reads back as a string, table writes are ignored). So each `W{k}` has its own StyledText / Style / Center, and `kinetic_layout.py` sets them from the font's real metrics.
 - **Reveal:** each word fades in over `SnapIn` (Fade In, 8 frames) with an ease-out cubic, rises `Rise` 0.01 and clears `InBlur` 6. `Bounce` > 0 brings the CapCut spring back if ever wanted (default 0). Captions hard-swap (OutDur 0). Key-word colour defaults to white.

@@ -451,7 +451,7 @@ def build_words(hook=False, kinetic=False):
         kin = [("Karaoke", "Light Up Spoken Word (0/1)", 0, 0, 1), ("Bounce", "Bounce Pop (0 = clean fade)", 0, 0, 0.6),
                ("PopDur", "Bounce Length (frames)", 10, 1, 30), ("KeyHold", "Key Word Extra Size", 0, 0, 0.3),
                ("SnapIn", "Fade In (frames)", 8, 1, 24), ("Outline", "Outline Thickness", 0, 0, 0.2),
-               ("ShadowAlpha", "Shadow Opacity", 0.5, 0, 1), ("ShadowSoft", "Shadow Softness", 6, 0, 20)]
+               ("ShadowAlpha", "Shadow Opacity (0 = off)", 0, 0, 1), ("ShadowSoft", "Shadow Softness", 6, 0, 20)]
         # Key-word colour defaults to white: the italic is the highlight (Tim's reference look).
         word_time_inputs += ("\t\t\t\t\t\tTopLeftRed = Input { Value = 1, },\n\t\t\t\t\t\tTopLeftGreen = Input { Value = 1, },\n"
                              "\t\t\t\t\t\tTopLeftBlue = Input { Value = 1, },\n")
