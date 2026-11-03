@@ -92,16 +92,31 @@ def set_line(words, space):
     return words[-1]["x"] + words[-1]["w"] if words else 0
 
 
+ONE_LINE_SLACK = 1.1   # keep one line, shrunk to fit, when it is at most this much too wide
+
+# Words a reader expects to stay with what follows: never end a line on one of these.
+CLINGY = {"a", "an", "the", "to", "of", "in", "on", "for", "and", "or", "and/or", "but", "if", "is",
+          "it", "it's", "i", "we", "you", "be", "so", "not", "our", "their", "your", "my", "at", "by"}
+
+
 def best_lines(words, space, maxw):
-    whole = set_line([dict(w) for w in words], space)
-    if len(words) == 1 or (len(words) == 2 and whole <= maxw):
-        return [words]
+    """One line whenever the caption fits (or would after a shrink of up to 1/ONE_LINE_SLACK). Otherwise the 2-line split that reads most naturally:
+    prefer breaking after punctuation, never leave a lone short word on a line or end the first
+    line on a word that clings to the next ("a", "to", "not"...), then balance the widths."""
+    if set_line([dict(w) for w in words], space) <= maxw * ONE_LINE_SLACK:
+        return [words]                      # slightly over: the caller shrinks it rather than break it
     best = None
     for k in range(1, len(words)):
         a, b = words[:k], words[k:]
-        wid = max(set_line([dict(w) for w in a], space), set_line([dict(w) for w in b], space))
-        if best is None or wid < best[0]:
-            best = (wid, [a, b])
+        wa, wb = set_line([dict(w) for w in a], space), set_line([dict(w) for w in b], space)
+        last = a[-1]["text"].lower()
+        cost = max(wa, wb) / maxw + abs(wa - wb) / maxw * 0.25
+        cost += 0 if last[-1:] in ",.;:?!…" else 0.3                   # natural pause
+        cost += 1.0 if last.strip(",.;:?!…") in CLINGY else 0
+        cost += 1.0 if any(len(l) == 1 and len(l[0]["text"]) <= 3 for l in (a, b)) else 0
+        cost += 2.0 if max(wa, wb) > maxw else 0
+        if best is None or cost < best[0]:
+            best = (cost, [a, b])
     return best[1]
 
 
