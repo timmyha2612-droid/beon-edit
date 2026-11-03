@@ -1,7 +1,6 @@
 # exec'd inside Resolve with resolve, project, WORK, NAME, A, B injected: configure Kinetic titles
 # A..B-1 on "<NAME> Kinetic Subtitles" from WORK/plans.json + layout.json (kinetic_layout.py).
-# Run 6-10 titles per call, one call at a time, SaveProject between calls. LAYOUT_ONLY = True
-# re-lays out titles that are already configured (keeps their text and word times).
+# Run 6-10 titles per call, one call at a time, SaveProject between calls.
 # Words follow Txt1: its Center is the block anchor and its Size the base size, so Tim can move or
 # scale a whole caption from the Inspector.
 import json, re, sys
@@ -10,8 +9,7 @@ from captions import KEYS
 ns = {"resolve": resolve, "project": project, "WORK": WORK, "__name__": "lib"}
 exec(open("/Users/timha/code/beon-edit/skills/subtitles/scripts/build_lib.py").read(), ns)
 ns["subs_name"] = lambda n: n + " Kinetic Subtitles"
-if not globals().get("LAYOUT_ONLY"):
-    ns["step_config"](NAME, A, B)                   # text, word times, in/out, names
+ns["step_config"](NAME, A, B)                       # text, word times, in/out, names
 layout = json.load(open(WORK + "/layout.json"))[NAME]
 items = ns["current_subs"](NAME).GetItemListInTrack("video", 1)
 done = []
