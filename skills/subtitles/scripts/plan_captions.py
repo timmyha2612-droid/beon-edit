@@ -16,6 +16,7 @@ import sys
 BASE = (sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/subs_work")).rstrip("/") + "/"
 MAX_LINE, MAX_WORDS, MAX_FRAMES = 28, 12, 118
 IN_DUR, OUT_DUR, LAST_OUT, LEAD, MIN_SHOW, MIN_GAP = 18, 4, 0, 2, 6, 4
+SNAP = 6  # a caption start this close to a picture cut moves onto the cut (Tim, Simone C03)
 
 
 def norm(t):
@@ -96,6 +97,13 @@ def main():
             frames, matched = align(text, seg)
             out.append({"start": start, "end": end, "text": text, "frames": [max(start, f) for f in frames],
                         "matched": matched, "tokens": len(text.split())})
+        cut_frames = sorted({s for s, _ in d.get("cuts", [])} - {0})
+        for n, c in enumerate(out):
+            near = [f for f in cut_frames if abs(f - c["start"]) <= SNAP]
+            if n and near:
+                snapped = min(near, key=lambda f: abs(f - c["start"]))
+                if out[n - 1]["start"] < snapped:
+                    c["start"] = snapped
         for n, c in enumerate(out):
             if n + 1 < len(out):
                 c["end"] = out[n + 1]["start"]

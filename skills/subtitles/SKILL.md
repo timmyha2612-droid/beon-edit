@@ -37,6 +37,7 @@ Word-by-word subtitles that rise in as each word is spoken. Built on 28 Oct 2026
 ## Tim's rules (non-negotiable)
 
 - **No gaps:** each caption ends exactly where the next starts. The last one runs to the end of the speech, and the outro (`OutDur 0`) only applies when the logo or end card isn't covering it.
+- **Caption changes land on the picture cut** [Tim, Simone Nov C03, 3 Nov 2026]: when a caption boundary falls near a cut in the edit (angle change, shot size change, jump cut, B-roll in or out), move the boundary onto the cut so the text and the picture change on the same frame. A caption switching a few frames before or after a cut looks messy. `plan_captions.py` snaps any start within `SNAP` (6 frames) of a cut; check by reading back every subtitle item's start against the V1 cut list (offsets of 1-6 frames are the miss).
 - **New sentence = new caption.** Natural breaks: at most 2 lines of about 24–28 characters, break at pauses and commas, never end a line on a/the/to/of. Proper punctuation and capitals, with numbers as written ("$10 million", "3 months").
 - **Words reveal at speech rate:** LEAD 2 frames before the word is spoken.
 - **Never several words at once:** at least 4 frames between word reveals (`MIN_GAP`). Too short a caption spreads evenly, and the last word may land up to 2 frames before the exit. Tim: "we dont ever want that happen as it looks bad and clumsy".
