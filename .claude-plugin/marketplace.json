@@ -1,0 +1,16 @@
+{
+  "name": "beon",
+  "owner": {
+    "name": "Tim (Beon Media)"
+  },
+  "metadata": {
+    "description": "Beon Media's editing skills for Claude Code and DaVinci Resolve."
+  },
+  "plugins": [
+    {
+      "name": "beon-edit",
+      "source": "./",
+      "description": "Tim's editing system for Beon Media videos in DaVinci Resolve: house rules, footage sort, A-roll cutting, B-roll QA/QC, colour grading, subtitles (Fluid Reveal Words), finishing."
+    }
+  ]
+}

@@ -1,14 +1,16 @@
-# exec'd inside Resolve with resolve, project, WORK, NAME, A, B injected: configure Kinetic titles
+# exec'd inside Resolve with resolve, project, WORK, SCRIPTS, NAME, A, B injected: configure Kinetic titles
 # A..B-1 on "<NAME> Kinetic Subtitles" from WORK/plans.json + layout.json (kinetic_layout.py).
 # Run 6-10 titles per call, one call at a time, SaveProject between calls. LAYOUT_ONLY = True
 # re-lays out titles that are already configured (keeps their text and word times).
 # Words follow Txt1: its Center is the block anchor and its Size the base size, so Tim can move or
 # scale a whole caption from the Inspector.
-import json, re, sys
+import json, os, re, sys
 sys.path.insert(0, WORK)
 from captions import KEYS
+# SCRIPTS = this folder; inject it when exec-ing (exec'd code has no __file__).
+SCRIPTS = globals().get("SCRIPTS") or os.path.dirname(os.path.abspath(globals()["__file__"]))
 ns = {"resolve": resolve, "project": project, "WORK": WORK, "__name__": "lib"}
-exec(open("/Users/timha/code/beon-edit/skills/subtitles/scripts/build_lib.py").read(), ns)
+exec(open(os.path.join(SCRIPTS, "build_lib.py")).read(), ns)
 ns["subs_name"] = lambda n: n + " Kinetic Subtitles"
 if not globals().get("LAYOUT_ONLY"):
     ns["step_config"](NAME, A, B)                   # text, word times, in/out, names

@@ -15,6 +15,14 @@ Tim's editing system for Beon Media concept videos in DaVinci Resolve, packed as
 | finish-pass | What Tim does at the end, hand-over state, music and ending guidance, delivery checks |
 | learn-from-tim | Read Tim's finished version, measure the differences, ask why, update the rules |
 
+## New editor setup (subtitles for the Beon shorts)
+
+1. Get access to this private repo from Tim, then clone it: `git clone https://github.com/timmyha2612-droid/beon-edit ~/code/beon-edit`
+2. In Claude Code: `/plugin marketplace add ~/code/beon-edit`, then `/plugin install beon-edit@beon`. Update later with `git pull` and `/plugin marketplace update beon`.
+3. Install the Garet font (Book and Heavy; one format only, .otf or .ttf, not both).
+4. Run `bash ~/code/beon-edit/skills/subtitles/scripts/install.sh` (puts the Fluid Reveal titles and the Auto/Resync Subtitles scripts into Resolve), then restart DaVinci Resolve Studio.
+5. Make sure Claude can reach Resolve (the DaVinci Resolve connector / MCP is enabled), then ask Claude to "sub the shorts" on your timelines. It follows skills/subtitles/SKILL.md: Tim's approved C2a look (Fluid Reveal Words defaults) and his caption rules.
+
 Scripts (run in the device VM or on the Mac, never writing media into Dropbox):
 - shotlog/scripts: ingest.py (one resumable pass per shoot: probe, gyro shake windows, keyframes, contact sheets)
 - aroll-cut/scripts: verbatim.py (CrisperWhisper verbatim transcript with ums and uhs; needs Tim's model folder and licence), resolve_snapshot.py + recut_plan.py + resolve_relay.py (recut the A-roll on a copy and move everything else with it), cut_pieces.py (rough picks to clean sub-pieces and an AppendToTimeline list, removes isolated ums and stutters), cut_review.py (sheets of every join: edge frames, difference, waveform, jump size, air), cut_air.py, filler_scan.py
