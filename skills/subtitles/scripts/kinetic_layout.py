@@ -1,9 +1,9 @@
 """Typeset Kinetic captions word by word (Fluid Reveal Words Kinetic).
 
-    python3 kinetic_layout.py WORK_DIR [--width 3840 --height 2160 --size 0.075 --slam 1.25]
+    python3 kinetic_layout.py WORK_DIR [--font libre|garet --width 3840 --height 2160 --size 0.075 --slam 1.25]
 
 Needs uharfbuzz + fonttools (run from a venv). Reads WORK/plans.json, KEYS from WORK/captions.py
-(KEYS = {caption index: {display token number: 1 italic | 2 italic + larger}}) and BLOCKS from
+(KEYS = {caption index: {display token number: 1 key | 2 key + larger}}) and BLOCKS from
 WORK/blocks.py:
 
     BLOCKS = {timeline name: [(start, end, x, y, align, max_width), ...]}
@@ -14,7 +14,7 @@ block's anchor: its left edge (align "left"), right edge ("right") or centre ("c
 vertical middle. A caption takes the block that covers most of its time and is shown only while
 that shot is up ("show": local [from, to) frames), so it never lands on the wrong angle.
 
-Writes WORK/layout.json: per caption {"anchor": [x, y], "show": [from, to], "words": [{text, style, scale, dx, dy}]}
+Writes WORK/layout.json: per caption {"anchor", "show": [from, to], "font", "base", "words": [{text, style, scale, dx, dy}]}
 with each word's centre as an offset from the anchor at the base size, so the build can keep the
 words relative to Txt1's Center / Size (move or scale the whole block from the Inspector).
 
@@ -22,9 +22,13 @@ Each word sits on its own Text+ layer, so Regular and Italic can mix on one line
 to 2 lines: one line for 1-2 words that fit, otherwise the most balanced 2-line split, shrunk only
 if a line still overflows max_width. Spacing is ink-aware: a regular space between advance boxes,
 widened when an italic's overhang would bring the inks closer than MIN_INK_GAP em.
-Calibration (Resolve 21.1, measured 3 Nov 2026): 1 em = Text+ Size x frame width x 0.6451,
-Text+ centres the advance box, and its centre sits 0.35 em above the baseline (Regular and Italic
-share hhea metrics); a larger word is lifted so baselines match.
+Font sets: libre = Libre Baskerville Regular + Italic key words; garet = Garet Book for every
+word (no italic exists, and Tim rejected Heavy key words), so only a slam (2) word stands out.
+Calibration (Resolve 21.1, measured 3 Nov 2026): Text+ sizes a font by its full hhea height, so
+1 em = Text+ Size x frame width x 0.7987 / ((ascent - descent) / upem): 0.644 for Libre
+Baskerville, 0.551 for Garet. Text+ centres the advance box; the centre sits MID em above the
+baseline (measured per font). Word scale goes through Text+ WordSize, which grows a word from its
+baseline, so baselines stay level without any lift.
 """
 import argparse
 import json
@@ -34,8 +38,13 @@ import sys
 import uharfbuzz as hb
 from fontTools.ttLib import TTFont
 
-EM_PER_SIZE = 0.6451
-FONTS = {"Regular": "LibreBaskerville-Regular.ttf", "Italic": "LibreBaskerville-Italic.ttf"}
+SIZE_TO_LINE = 0.7987   # Text+ Size x frame width = this many hhea line heights
+FONTSETS = {
+    "libre": {"family": "Libre Baskerville", "mid": 0.35,
+              "Regular": ("LibreBaskerville-Regular.ttf", "Regular"), "Key": ("LibreBaskerville-Italic.ttf", "Italic")},
+    "garet": {"family": "Garet", "mid": 0.297,
+              "Regular": ("Garet-Book.ttf", "Book"), "Key": ("Garet-Book.ttf", "Book")},   # Tim: no Heavy key words
+}
 LINE_PITCH = 1.2      # em, baseline to baseline
 MIN_INK_GAP = 0.22    # em, smallest visible gap between two words' inks
 
@@ -47,11 +56,11 @@ def font_path(name):
     raise FileNotFoundError(name)
 
 
-def load(style):
-    path = font_path(FONTS[style])
+def load(file_name, mid):
+    path = font_path(file_name)
     face = hb.Face(open(path, "rb").read())
     hh = TTFont(path)["hhea"]
-    return hb.Font(face), face.upem, (hh.ascent + hh.descent) / 2 / face.upem
+    return hb.Font(face), face.upem, mid, (hh.ascent - hh.descent) / face.upem
 
 
 def measure(font, upem, text):
@@ -113,13 +122,16 @@ def main():
     ap.add_argument("--height", type=float, default=2160)
     ap.add_argument("--size", type=float, default=0.075)
     ap.add_argument("--slam", type=float, default=1.25)
+    ap.add_argument("--font", choices=sorted(FONTSETS), default="libre")
     a = ap.parse_args()
     sys.path.insert(0, a.work)
     from captions import KEYS
     from blocks import BLOCKS
-    fonts = {s: load(s) for s in FONTS}
+    fs = FONTSETS[a.font]
+    fonts = {kind: load(fs[kind][0], fs["mid"]) for kind in ("Regular", "Key")}
+    style_of = {kind: fs[kind][1] for kind in ("Regular", "Key")}
     plans = json.load(open(os.path.join(a.work, "plans.json")))
-    em1 = a.size * a.width * EM_PER_SIZE                     # em in px at the base size
+    em1 = a.size * a.width * SIZE_TO_LINE / fonts["Regular"][3]   # em in px at the base size
     out = {}
     for name, plan in plans.items():
         caps = []
@@ -133,9 +145,10 @@ def main():
                 words = []
                 for i, t in enumerate(c["text"].split(), 1):
                     k = keys.get(i, 0)
-                    style = "Italic" if k else "Regular"
+                    kind = "Key" if k else "Regular"
+                    style = style_of[kind]
                     scale = (a.slam if k == 2 else 1) * fit
-                    font, upem, mid = fonts[style]
+                    font, upem, mid, _ = fonts[kind]
                     adv, lo, hi = measure(font, upem, t)
                     em = em1 * scale
                     words.append({"text": t, "style": style, "scale": scale, "w": adv * em, "ink": (lo, hi), "em": em, "mid": mid})
@@ -151,9 +164,10 @@ def main():
                 base_dy = (len(lines) - 1) / 2 * pitch - li * pitch   # line centres around the anchor
                 for w in line:
                     w["dx"] = (left + w["x"] + w["w"] / 2) / a.width
-                    # equal baselines: a larger word's centre sits higher by mid * (em - base em)
-                    w["dy"] = (base_dy + w["mid"] * (w["em"] - em1 * fit)) / a.height
+                    # WordSize grows a word from its baseline, so equal centres keep baselines level
+                    w["dy"] = base_dy / a.height
             caps.append({"anchor": [bx, by], "show": window(blk, c["start"], c["end"]),
+                         "font": fs["family"], "base": style_of["Regular"],
                          "words": [{k: round(w[k], 5) if isinstance(w[k], float) else w[k]
                                     for k in ("text", "style", "scale", "dx", "dy")} for l in lines for w in l]})
         out[name] = caps
