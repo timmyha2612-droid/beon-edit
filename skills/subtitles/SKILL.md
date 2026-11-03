@@ -18,6 +18,7 @@ Word-by-word subtitles that rise in as each word is spoken. Built on 28 Oct 2026
 | `assets/Fluid Reveal Words Hook.setting` | Hook version of Fluid Reveal Words: same reveal and timing, plus a per-word highlight (accent colour, extra weight, pop). For video hooks only; normal subtitles stay on Fluid Reveal Words. |
 | `assets/Fluid Reveal Words Kinetic.setting` | Kinetic (editorial) hook title: every word on its own layer in Libre Baskerville, key words in true italic, clean fade-rise-unblur reveal, soft shadow. Tim's preferred hook look. |
 | `scripts/kinetic_layout.py`, `scripts/kinetic_apply.py` | Typeset Kinetic captions as stacked blocks in each shot's negative space (HarfBuzz, ink-aware italics) and push the layout into the titles. |
+| `assets/Beon Name Title.setting` | Two-line name super: big Garet Heavy name over a small letter-spaced Garet Book role line (white, 85% opacity, no colour accent), same clean fade-rise reveal; role follows the name by 6 frames. Controls: Name, Role, Position, Justify, sizes, Line Gap, In/Out. |
 | `scripts/install.sh` | Copies both titles and the two Resolve scripts into Resolve. Run once per machine, then restart Resolve. |
 | `scripts/build_presets.py OUT_DIR` | Regenerates both `.setting` files (fonts, default curves, write-on maths). Edit this, never the `.setting` by hand. |
 | `scripts/Auto Subtitles.py` | Workspace > Scripts > Edit. One click: transcribe A1, caption, build, place on a new top track. |
@@ -92,6 +93,10 @@ Tim's preferred hook look (built 3 Nov 2026 on C1 HERO v6): white Libre Baskervi
 - **Workflow:** (1) build titles with build_lib, `ns["TITLE"] = "Fluid Reveal Words Kinetic"`, `subs_name = n + " Kinetic Subtitles"`. (2) `WORK/captions.py` holds `CAPTIONS` plus `KEYS = {caption index: {token number: 1 italic | 2 italic slam}}`; `WORK/blocks.py` holds `BLOCKS = {name: [(start, end, x, y, align, max_width), ...]}` per stretch of the edit (C1: Jordan (0.07, 0.56, left, 0.34), Bonnie (0.93, 0.56, right, 0.30), wide (0.5, 0.72, center, 0.5)). (3) `hb/bin/python kinetic_layout.py WORK` (venv with uharfbuzz + fonttools). (4) with the subtitle timeline current, exec `kinetic_apply.py` with `NAME`, `A`, `B`, about 8 titles per call. (5) stills of every caption fully revealed + contact sheet.
 - **Captions crossing a cut** take the block covering most of their time and are gated to that shot (`show` window), so text never lands on the wrong angle; it leaves at the cut.
 - **Gotchas:** never put an expression on a W layer's `Size` (instanced from Txt1): it loops and the whole nested frame renders black. Scale slam / shrink-to-fit words through `WordSizeX/Y`. `GetInput` on an expression-driven input returns None; verify with stills, not read-backs. `SetInput` on an instanced input is ignored. Resolve crashes if Fusion edits are sent as parallel calls.
+
+## Name supers (Beon Name Title)
+
+C1 HERO v6 (3 Nov 2026): "Bonnie / FOUNDER & CEO, BEON MEDIA" over her first post-hook shot (927-982), "Jordan / SEO MANAGER, BEON MEDIA" over his (982-1014), each in the open wall beside them (Bonnie name at (0.56, 0.62), Jordan at (0.07, 0.62), left-justified, Name Size 0.11). Build like the subtitles: duplicate the long-form with build_lib `step_dup` (subs_name = n + " Name Titles"), insert one title per shot at the cut frames (insert one more at the last cut and delete it, to trim), set `Name`/`Role` StyledText and `Name.Center`, then AppendToTimeline the nested timeline onto a free stretch of the subtitles track. Short shots: drop OutDur to ~6 so the title holds long enough.
 
 ## After Tim edits
 

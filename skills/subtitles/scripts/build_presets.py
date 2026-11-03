@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the Fluid Reveal (letters) and Fluid Reveal Words title presets for DaVinci Resolve."""
+"""Generate the Fluid Reveal (letters), Fluid Reveal Words and Beon Name Title presets for DaVinci Resolve."""
 import sys
 
 OUT_DIR = sys.argv[1]
@@ -525,8 +525,92 @@ def build_words(hook=False, kinetic=False):
     return wrap("FluidRevealWords", inputs, tools)
 
 
+# ---------------------------------------------------------------- name title (Beon Name Title)
+def build_name():
+    """Two-line name super: big Garet Heavy name over a small letter-spaced Garet Book role line.
+    Same clean reveal as the Kinetic captions (ease-out fade, small rise, blur clearing), the role
+    line following the name by Stagger frames, and the shared fade-out on the clip's last frames."""
+    c = "Ctl"
+    shadow = "".join(f"\t\t\t\t\t\t{r},\n" for r in [
+        'Enabled3 = Input { Value = 1, }', 'Size3 = Input { Value = 1, }', 'SizeX3 = Input { Value = 1, }', 'SizeY3 = Input { Value = 1, }',
+        'Red3 = Input { Value = 0, }', 'Green3 = Input { Value = 0, }', 'Blue3 = Input { Value = 0, }',
+        f'Alpha3 = Input {{ Value = 0.5, Expression = "{c}.ShadowAlpha", }}', 'Offset3 = Input { Value = { 0.004, -0.012 }, }',
+        f'SoftnessX3 = Input {{ Value = 6, Expression = "{c}.ShadowSoft", }}', f'SoftnessY3 = Input {{ Value = 6, Expression = "{c}.ShadowSoft", }}'])
+    name = ('\t\t\t\t\t\tStyledText = Input { Value = "Bonnie", },\n')
+    role = ('\t\t\t\t\t\tStyledText = Input { Value = "FOUNDER & CEO, BEON MEDIA", },\n')
+    tools = text_plus("Name", name, shadow + "\t\t\t\t\t\tCenter = Input { Value = { 0.68, 0.6 }, },\n"
+                      "\t\t\t\t\t\tHorizontalLeftCenterRight = Input { Value = -1, },\n", ("Garet", "Heavy"))
+    tools = tools.replace("Size = Input { Value = 0.08, }", "Size = Input { Value = 0.11, }")
+    r = text_plus("Role", role, shadow + f'\t\t\t\t\t\tCenter = Input {{ Value = {{ 0.68, 0.52 }}, Expression = "Point(Name.Center.X, Name.Center.Y-{c}.Gap)", }},\n'
+                  '\t\t\t\t\t\tHorizontalLeftCenterRight = Input { Value = -1, Expression = "Name.HorizontalLeftCenterRight", }\n'.rstrip("\n") + ",\n"
+                  '\t\t\t\t\t\tAlpha1 = Input { Value = 0.85, }\n'.rstrip("\n") + ",\n", ("Garet", "Book"))
+    tools += r.replace("Size = Input { Value = 0.08, }", "Size = Input { Value = 0.026, }").replace(
+        "CharacterSpacing = Input { Value = 0.98, }", "CharacterSpacing = Input { Value = 1.18, }")
+    prev = "Clear"
+    for line, delay in (("Name", "0"), ("Role", f"{c}.Stagger")):
+        p = f"1-(1-min(max((time-{delay})/max({c}.InDur,1),0),1))^3"
+        tools += expr_mod(f"{line}Fx", {"n1": f'Input {{ Value = 0, Expression = "{p}", }}',
+                                         "n2": f'Input {{ Value = 0.012, Expression = "{c}.Rise", }}'},
+                          number="n1", px="0.5", py="0.5-n2*(1-n1)")
+        tools += f"""\t\t\t\t{line}Blur = Blur {{
+\t\t\t\t\tCtrlWZoom = false,
+\t\t\t\t\tNameSet = true,
+\t\t\t\t\tInputs = {{
+\t\t\t\t\t\tFilter = Input {{ Value = FuID {{ "Gaussian" }}, }},
+\t\t\t\t\t\tXBlurSize = Input {{ Value = 0, Expression = "max(0, {c}.InBlur*(1-{line}Merge.Blend))", }},
+\t\t\t\t\t\tInput = Input {{ SourceOp = "{line}", Source = "Output", }},
+\t\t\t\t\t}},
+\t\t\t\t}},
+\t\t\t\t{line}Merge = Merge {{
+\t\t\t\t\tCtrlWZoom = false,
+\t\t\t\t\tNameSet = true,
+\t\t\t\t\tInputs = {{
+\t\t\t\t\t\tBackground = Input {{ SourceOp = "{prev}", Source = "Output", }},
+\t\t\t\t\t\tForeground = Input {{ SourceOp = "{line}Blur", Source = "Output", }},
+\t\t\t\t\t\tCenter = Input {{ SourceOp = "{line}Fx", Source = "PointResult", }},
+\t\t\t\t\t\tBlend = Input {{ SourceOp = "{line}Fx", Source = "NumberResult", }},
+\t\t\t\t\t\tPerformDepthMerge = Input {{ Value = 0, }},
+\t\t\t\t\t}},
+\t\t\t\t}},
+"""
+        prev = f"{line}Merge"
+    ctl = [("InDur", "In Duration (frames)", 10, 1, 40), ("Stagger", "Role Delay (frames)", 6, 0, 30),
+           ("Rise", "Rise Distance", 0.012, 0, 0.1), ("InBlur", "In Blur", 8, 0, 40),
+           ("OutDur", "Out Duration (frames)", 10, 0, 40), ("OutLift", "Out Lift", 0.01, 0, 0.1),
+           ("OutBlur", "Out Blur", 10, 0, 40), ("Gap", "Line Gap", 0.085, 0, 0.3),
+           ("ShadowAlpha", "Shadow Opacity", 0.5, 0, 1), ("ShadowSoft", "Shadow Softness", 6, 0, 20)]
+    tools += f"""\t\t\t\t{c} = Background {{
+\t\t\t\t\tCtrlWZoom = false,
+\t\t\t\t\tNameSet = true,
+\t\t\t\t\tInputs = {{
+\t\t\t\t\t\tWidth = Input {{ Value = 16, }},
+\t\t\t\t\t\tHeight = Input {{ Value = 16, }},
+""" + "".join(f"\t\t\t\t\t\t{k} = Input {{ Value = {d}, }},\n" for k, _, d, _, _ in ctl) + """\t\t\t\t\t},
+\t\t\t\t\tUserControls = ordered() {
+""" + "".join(slider(k, label, d, lo, hi_, lo) for k, label, d, lo, hi_ in ctl) + """\t\t\t\t\t},
+\t\t\t\t},
+"""
+    tools += out_stage(c, prev)
+    inputs = (
+        '\t\t\t\tNameText = InstanceInput { SourceOp = "Name", Source = "StyledText", Name = "Name", Page = "Controls" },\n'
+        '\t\t\t\tRoleText = InstanceInput { SourceOp = "Role", Source = "StyledText", Name = "Role", Page = "Controls" },\n'
+        '\t\t\t\tPosition = InstanceInput { SourceOp = "Name", Source = "Center", Name = "Position" },\n'
+        '\t\t\t\tJustify = InstanceInput { SourceOp = "Name", Source = "HorizontalLeftCenterRight", Name = "Justify", Default = -1 },\n'
+        '\t\t\t\tNameFont = InstanceInput { SourceOp = "Name", Source = "Font", Name = "Name Font", ControlGroup = 2 },\n'
+        '\t\t\t\tNameStyle = InstanceInput { SourceOp = "Name", Source = "Style", ControlGroup = 2 },\n'
+        '\t\t\t\tNameSize = InstanceInput { SourceOp = "Name", Source = "Size", Name = "Name Size", Default = 0.11 },\n'
+        '\t\t\t\tRoleFont = InstanceInput { SourceOp = "Role", Source = "Font", Name = "Role Font", ControlGroup = 3 },\n'
+        '\t\t\t\tRoleStyle = InstanceInput { SourceOp = "Role", Source = "Style", ControlGroup = 3 },\n'
+        '\t\t\t\tRoleSize = InstanceInput { SourceOp = "Role", Source = "Size", Name = "Role Size", Default = 0.026 },\n'
+        '\t\t\t\tRoleTracking = InstanceInput { SourceOp = "Role", Source = "CharacterSpacing", Name = "Role Tracking", Default = 1.18 },\n'
+        '\t\t\t\tRoleOpacity = InstanceInput { SourceOp = "Role", Source = "Alpha1", Name = "Role Opacity", Default = 0.85 },\n'
+        + "".join(f'\t\t\t\t{k} = InstanceInput {{ SourceOp = "{c}", Source = "{k}", Default = {d} }},\n' for k, _, d, _, _ in ctl))
+    return wrap("BeonNameTitle", inputs, tools)
+
+
 open(f"{OUT_DIR}/Fluid Reveal.setting", "w").write(build_letters())
 open(f"{OUT_DIR}/Fluid Reveal Words.setting", "w").write(build_words())
 open(f"{OUT_DIR}/Fluid Reveal Words Hook.setting", "w").write(build_words(hook=True))
 open(f"{OUT_DIR}/Fluid Reveal Words Kinetic.setting", "w").write(build_words(kinetic=True))
+open(f"{OUT_DIR}/Beon Name Title.setting", "w").write(build_name())
 print("ok")
