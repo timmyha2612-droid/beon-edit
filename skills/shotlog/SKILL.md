@@ -17,6 +17,7 @@ Goal: never analyse the same footage twice. Every shoot folder gets a `_shotlog/
 
 ## Before any footage task
 
+0. Make sure the shoot is in Footage Prep (`footage-prep` MCP: `library_shoots`, else `import` and let analysis finish). Its scores, flags and selects are the first source for B-roll picks (broll-qaqc Stage 0) [Tim, 9 Nov 2026].
 1. Find and read `_shotlog/shotlog.json`. If none exists, create one at the end of the job.
 2. Use what's there: content and people, gyro windows, people windows (face_x for 9:16 pan), verified frames, transcripts, interview best lines and `avoid` lists, `lessons`.
 3. Check `usage` so a series of concepts doesn't reuse a clip window (same clip + overlapping source range in another concept = repeat). Prefer unused shots; reuse only when it's the only option.

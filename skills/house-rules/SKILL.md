@@ -16,6 +16,7 @@ How to work with Tim on any edit. Read this first, then load the skill for the s
 | 0 | house-rules | Every job: working agreement, grilling, routing |
 | 0 | client-styles | Every client job: read the client's profile before grilling |
 | 1 | resolve-footage-sort | Sorting raws into bins, logging audio and interviews |
+| 1 | Footage Prep app (`footage-prep` MCP) | Every shoot, before any B-roll pick: import, analyse, pick from its selects (broll-qaqc Stage 0) |
 | 1 | shotlog | Any footage task: read the shoot's log first, write back after |
 | 2 | aroll-cut | Story beats and the interview cut (the "meat") |
 | 3–5 | broll-qaqc | Picking, placing, measuring and fixing B-roll |

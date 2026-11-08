@@ -2,16 +2,24 @@
 name: broll-qaqc
 description: "This skill should be used when adding, reviewing or fixing B-roll on a Beon Media concept edit in DaVinci Resolve: \"add B-roll\", \"pick shots for this line\", \"check the shaky shots\", \"use shots we haven't used\", \"fix this shot\", \"pacing pass\". Covers selection, placement, the pacing gate, the motion card, the fix ladder (re-pick, Gyroflow, Speed Warp, replace) and sign-off.\n"
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # B-roll QA/QC (Tim, Beon Media)
 
 Work in stages and stop at the gates. Never touch V1/A1 (interview), the music track, or anything Tim says he has placed. Stop all Resolve calls when Tim says he needs Resolve; analysis keeps running in the device VM.
 
-## Stage 0. Shot log first
+## Stage 0. Footage Prep first, then the shot log [Tim, Mill site update, 9 Nov 2026]
 
-Read `<shoot>/_shotlog/shotlog.json` (shotlog skill). Reuse gyro windows, people windows, verified frames, tone tags, motion cards and transcripts; check `usage` (prefer unused windows); read `lessons`. Write back at the end.
+Every shoot goes through Tim's Footage Prep app (the `footage-prep` MCP tools) before any B-roll is picked. Never pick B-roll from contact sheets or by eye alone: on The Mill (Nov C2) shots picked that way were shaky, didn't flow and were partly irrelevant, and the app had already scored several of them "reject" or "shaky".
+
+1. `library_shoots` (query = client or shoot). If the folder isn't there, `inspect_folder` then `import` it (client name, `watch: false`) and wait on `progress` until analysis is done. Opening a shoot switches the app, so never pass `switch_shoot` unless Tim asked.
+2. Pick only from the app's selects: `selects` with `without_flags: ["shaky","whip","motion_blur","blocked"]`, inside each select's `in_frame`/`out_frame`. Prefer `auto_tier`/Tim's tier `hero` and `metrics.stability` >= ~0.75; below ~0.65 only when it's the only shot for the line, and flag it. Skip clips the app rates `reject` (`clips` with `auto_tier`).
+3. Match every shot to its line first (what's said on screen), then flow: similar moves and speeds in a run, never the same room twice in a row, settle before a cut back to camera.
+4. Stabilisation renders are Tim's to start in the app; list the shots that need them.
+5. Mention in the report which app selects (clip, frames, score, stability) were used.
+
+Then read `<shoot>/_shotlog/shotlog.json` (shotlog skill). Reuse gyro windows, people windows, verified frames, tone tags, motion cards and transcripts; check `usage` (prefer unused windows); read `lessons`. Write back at the end.
 
 ## Stage 1. Select
 
