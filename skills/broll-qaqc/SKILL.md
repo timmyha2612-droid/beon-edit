@@ -2,7 +2,7 @@
 name: broll-qaqc
 description: "This skill should be used when adding, reviewing or fixing B-roll on a Beon Media concept edit in DaVinci Resolve: \"add B-roll\", \"pick shots for this line\", \"check the shaky shots\", \"use shots we haven't used\", \"fix this shot\", \"pacing pass\". Covers selection, placement, the pacing gate, the motion card, the fix ladder (re-pick, Gyroflow, Speed Warp, replace) and sign-off.\n"
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
 ---
 
 # B-roll QA/QC (Tim, Beon Media)
@@ -18,6 +18,15 @@ Every shoot goes through Tim's Footage Prep app (the `footage-prep` MCP tools) b
 3. Match every shot to its line first (what's said on screen), then flow: similar moves and speeds in a run, never the same room twice in a row, settle before a cut back to camera.
 4. Stabilisation renders are Tim's to start in the app; list the shots that need them.
 5. Mention in the report which app selects (clip, frames, score, stability) were used.
+6. Best stretch inside the select [Tim, Mill, 9 Nov 2026]: a select is 3-12 s but a slot uses ~2-3 s of it. Never start "about 1 s in": measure every window of the needed source length inside the select and take the smoothest. `scripts/select_window.py '<json [[slot, clip, need_src_frames, [[in,out],...]],...]>' out.json <clip folder>` (optical-flow jitter p90, speed evenness, reversals). At 48% the append needs `ceil(D*fps/24)` real-time source frames, so limit the search to windows that fit before the clip end.
+
+## Stage 0b. What Tim expects of every B-roll shot [Tim, Mill, 9 Nov 2026]
+
+- **Relevant to the words, literally.** "The finishes" = kitchen joinery, stone benchtop, tiles, tapware, not a toilet. Toilets only when the line is about bathrooms, and never as the first finishes shot.
+- **Use the establishing shots.** When the shoot has building or street exteriors, use them: over the line that names the place ("we're standing in the display suite of The Mill"), on level or location changes ("we're at Level 5"), and as the closing wide into the end card. Don't leave the hero exteriors unused.
+- **Flow.** Never the same room twice in a row; similar move speed through a run; cut on motion; settle before cutting back to camera.
+- **Stabilise all handheld B-roll** with the Gyroflow Stabilize Flagged script (colour Orange, run it; headless driver pattern in house-rules/references/resolve-recipes.md), horizon lock on: clip-marker custom data `{"gyroflow": {"horizon": true, "horizon_amount": 100}}`. Drone shots are already gimbal-smooth; skip them.
+- **Straight verticals, level floor.** After stabilising, export a still of every shot and run `scripts/level_check.py STILL...`: it measures the lean of door frames, walls and window mullions and prints the rotation that makes them vertical plus the **minimum** zoom that still covers the 9:16 frame after that rotation. Set `RotationAngle` and `ZoomX/ZoomY` to exactly that (never zoom more than the rotation needs), re-export and check again. Looking-up exteriors converge (keystone): level on the verticals nearest the centre of the frame.
 
 Then read `<shoot>/_shotlog/shotlog.json` (shotlog skill). Reuse gyro windows, people windows, verified frames, tone tags, motion cards and transcripts; check `usage` (prefer unused windows); read `lessons`. Write back at the end.
 

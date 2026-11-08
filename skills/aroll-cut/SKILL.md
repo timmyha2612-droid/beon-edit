@@ -34,6 +34,13 @@ The aim above everything: the speech flows smoothly and sounds natural, not rush
 
 Write the picks as rough source ranges (transcript times are fine) in a plan JSON and run `cut_pieces.py plan.json`. In one pass it snaps every in and out to a real silence (never inside a word), sets the air, trims hesitations by punctuation (0.22 s mid-sentence, 0.35 s after a comma, 0.45 s after a full stop), finds untranscribed ums and uhs with the steadiness test, removes isolated ones and "and and" stutters on function words (`"fillers": "cut"`), and prints the AppendToTimeline items laid end to end (multicam: `src_fps` 24 plus the angle offset). Glued fillers ("is-uhh", "uh-making") and fillers inside continuous speech are only flagged with a suggested cut: decide those by the rules in 2b and tell Tim about the ones left in. Treat its output as the first cut, not the final word: read every flag.
 
+## 2a. Audio QC before any handover [Tim, Mill Nov C2, 9 Nov 2026]
+
+Tim on the first Mill cut: "why the audio of Jay is so bad, like a lot of stutter and everything doesnt flow smooth?" and "the uhmm stutter where I just highlighted ... why dont you take it out?". Plain whisper on a whole line printed "The finishes is actually..." while the piece started with a 0.43 s "um" (C1568 15.42-15.85).
+- Never trust a transcript of a whole piece to prove it is clean. Read the 10 ms energy envelope of the first and last ~0.8 s of every piece and of every inner pause: any separate voiced blob before the first word or after the last is a filler or breath. Confirm with a tiny-window transcript (it says "Um,").
+- Run the full section 2b scan on every used range, measure the F0 of each piece's tail, and simulate the whole cut (concatenate the ranges) and transcribe it before touching Resolve.
+- Multi-take Q&A: when a piece needs several cuts to be clean, prefer another take of the same answer.
+
 ## 2b. Remove ums, uhs and stutters (Tim, 15 Oct 2026)
 
 Tim's rule for every talking-head A-roll: take out the fillers and stutters, but the speech must still flow and sound smooth after they're gone. Flow beats purity. If a removal makes a line sound clipped, rushed or stitched together, put a little air back, try another take of the line, or leave that one in and tell Tim.
