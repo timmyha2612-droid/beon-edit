@@ -1,7 +1,7 @@
 # Tim's B-roll rulebook
 
 The one list of how Tim handles B-roll. The B-roll work follows it, and the checks (`broll_gate.py`,
-the motion cards, and the QA agent planned for step 2) judge against it. If a rule here and a script disagree,
+the motion cards, and the qa-manager agent with its checklist `qa-loop/references/checklists/broll.md`) judge against it. If a rule here and a script disagree,
 the rule wins and the script gets fixed. Client profiles can override a rule for that client.
 
 Tags: [Tim] said or confirmed by Tim (source, date) · [inferred] measured, not confirmed · default = starting

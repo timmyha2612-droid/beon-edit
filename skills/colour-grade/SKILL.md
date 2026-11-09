@@ -2,7 +2,7 @@
 name: colour-grade
 description: "This skill should be used when colour grading a Beon Media edit in DaVinci Resolve with Tim's template, or when reading or learning his grades: \"grade C7\", \"apply the template\", \"white balance these shots\", \"fix the exposure\", \"learn my colour grading\". Covers the 9-node template, scope-led white balance and HDR exposure, grading by scene, the light (crash-safe) grading method, and reading/writing grades through DRX/DRT.\n"
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
 ---
 
 # Colour grade (Tim's workflow)
@@ -70,7 +70,8 @@ metadata:
 8. **Verify:**
    - Export the DRT and run `grade_read.py` to confirm the values.
    - Export one LUT per group and re-measure with `measnp.py`.
-9. **Report a table:** shot | group | Temp | Tint | Global | neutral Cb/Cr | surface level | flags. Tim checks.
+9. **QA:** run the QA loop (qa-loop skill, stage `grade`) before Tim sees it.
+10. **Report a table:** shot | group | Temp | Tint | Global | neutral Cb/Cr | surface level | flags, plus the QA result. Tim checks.
 
 ## Reading and writing grades (no colour API for Temp/Tint/HDR)
 

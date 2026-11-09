@@ -26,7 +26,7 @@ A-roll:
 
 B-roll:
 - Shot list diff: removed, added, slipped (source in changed), retimed (source span ÷ duration = speed), re-ordered, zoomed.
-- Motion cards (`broll-qaqc/scripts/motion_card.py`) on any shot Tim slipped or retimed, comparing Claude's window with his.
+- Motion cards (`broll/scripts/motion_card.py`) on any shot Tim slipped or retimed, comparing Claude's window with his.
 - Coverage %, on-camera stretches, break length and shots, outro.
 
 Grade:

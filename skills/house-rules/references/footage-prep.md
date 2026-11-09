@@ -32,10 +32,11 @@ they are named like `library_shoots`, `inspect_folder`, `import`, `progress`, `s
 ## 3. Priority and the second look
 
 - Footage Prep's scorer wins when it disagrees with Claude's own measurements for **choosing** a shot.
-- Its winners still get a second, independent look before they're placed: the subject and people
-  match the line, framing works in 9:16, and the stretch actually used (often 2-3 s of a 3-12 s select)
-  is smooth at the slot's speed (`broll_auto.py` measures that stretch). The QA agent (planned, step 2)
-  takes over this check; until then do it yourself and note it in the report.
+- Its winners still get checked twice. Before placing, the editor checks the subject and people match
+  the line, the framing works in 9:16, and the stretch actually used (often 2-3 s of a 3-12 s select) is
+  smooth at the slot's speed (`broll_auto.py` measures that stretch). After placing, the qa-manager agent
+  checks again with fresh eyes (broll checklist B-09, B-20, B-21), and its judgement calls get the
+  qa-verifier's second look.
 - Report which app selects were used (clip, frames, score, stability) and any you overrode, with why.
 
 ## 4. Into the shot log

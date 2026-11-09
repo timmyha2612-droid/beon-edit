@@ -21,7 +21,7 @@ When the profile and a stage skill disagree, the profile wins for that client. W
 
 1. At the start of the job, read `references/<client>.md`. If there's none, copy `references/_template.md` and fill in what the brief says.
 2. In the house-rules grilling, skip questions the profile answers with a [Tim] rule. Confirm [inferred] rules that matter for this concept. Ask about anything marked "ask".
-3. Apply the profile in every stage: length and structure in aroll-cut, coverage and speeds in broll-qaqc, the template and per-client habits in colour-grade, music, end card and delivery in finish-pass, and the caption look in subtitles (Step 0: profile, then the project's other timelines, then Tim; always confirmed with him).
+3. Apply the profile in every stage: length and structure in aroll-cut, coverage and speeds in broll, the template and per-client habits in colour-grade, music, end card and delivery in finish-pass, and the caption look in subtitles (Step 0: profile, then the project's other timelines, then Tim; always confirmed with him).
 4. Mention in the report which profile rules were applied and anything that broke from them.
 
 ## Tags
