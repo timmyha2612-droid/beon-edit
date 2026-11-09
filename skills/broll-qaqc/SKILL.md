@@ -2,10 +2,22 @@
 name: broll-qaqc
 description: "This skill should be used when adding, reviewing or fixing B-roll on a Beon Media concept edit in DaVinci Resolve: \"add B-roll\", \"pick shots for this line\", \"check the shaky shots\", \"use shots we haven't used\", \"fix this shot\", \"pacing pass\". Covers selection, placement, the pacing gate, the motion card, the fix ladder (re-pick, Gyroflow, Speed Warp, replace) and sign-off.\n"
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # B-roll QA/QC (Tim, Beon Media)
+
+## HARD GATE: every B-roll pass, no exceptions [Tim, Hired Home Nov S2 C2, 9 Nov 2026]
+
+On Hired Home C2 this skill had been read and B-roll still went in at 100% with no Gyroflow and no window scoring. Tim: "make that apply to every single time". Do these five steps for every shot placed above V1, in order, and don't report the B-roll as done until step 5 prints PASS:
+
+1. **Footage Prep picks the selects** (Stage 0): `selects` without shaky/whip/motion_blur/blocked, stability >= ~0.75. Its gyro (rtmd) metrics score the whole select. Don't re-measure them by eye.
+2. **`scripts/broll_auto.py SLOTS.json CLIP_DIR -o plan.json --snippet apply.py`** finds the smoothest stretch of each select at the slot's length. Pass `sel_frames` (the select's `in_frame`/`out_frame`) and `movement` straight from Footage Prep. Speed ladder: 48% first (25% for 100 fps), and only slower when 48% doesn't pass (people 60/50%). It also picks the Gyroflow preset and prints REJECT for reversals, focus pulls, exposure jumps and uneven moves: re-pick those. About 3 s per slot and one line of output each. Don't read frames to judge motion; look only to check the subject, people and framing of the winner.
+3. **Place with its snippet** (window, speed, Optical Flow, Speed Warp Better below 48%, Pan/Zoom, Orange + gyroflow marker). Confirm Pan with one still per timeline. Pan scales with zoom on 9:16 fit-space timelines: `(0.5 - x) * 1080 * Zoom`.
+4. **`python3 scripts/gyroflow_headless.py --project P --timeline T`** stabilises every Orange clip (Tim's script, headless). Run it from Bash, not run_script.
+5. **`python3 scripts/broll_gate.py --project P --timeline T`** must print PASS: speed <= 60%, Optical Flow, stabilised (shots with no gyro track are listed for Tim). If Tim approves a 100% or unstabilised shot, pass it with `--allow`.
+
+A plugin hook (`hooks/broll_guard.py`) blocks any run_script that appends camera video above V1 without SetSpeed, RetimeProcess and an Orange gyroflow flag. Titles, counters, logos and nested timelines need a `# broll-ok: <reason>` comment in the script. Then shake_check.py on a proxy render (Stage 5b) before sign-off.
 
 Work in stages and stop at the gates. Never touch V1/A1 (interview), the music track, or anything Tim says he has placed. Stop all Resolve calls when Tim says he needs Resolve; analysis keeps running in the device VM.
 
@@ -18,7 +30,7 @@ Every shoot goes through Tim's Footage Prep app (the `footage-prep` MCP tools) b
 3. Match every shot to its line first (what's said on screen), then flow: similar moves and speeds in a run, never the same room twice in a row, settle before a cut back to camera.
 4. Stabilisation renders are Tim's to start in the app; list the shots that need them.
 5. Mention in the report which app selects (clip, frames, score, stability) were used.
-6. Best stretch inside the select [Tim, Mill, 9 Nov 2026]: a select is 3-12 s but a slot uses ~2-3 s of it. Never start "about 1 s in": measure every window of the needed source length inside the select and take the smoothest. `scripts/select_window.py '<json [[slot, clip, need_src_frames, [[in,out],...]],...]>' out.json <clip folder>` (optical-flow jitter p90, speed evenness, reversals). At 48% the append needs `ceil(D*fps/24)` real-time source frames, so limit the search to windows that fit before the clip end.
+6. Best stretch inside the select [Tim, Mill, 9 Nov 2026]: a select is 3-12 s but a slot uses ~2-3 s of it. Never start "about 1 s in": measure every window of the needed source length inside the select and take the smoothest. Use `scripts/broll_auto.py` (hard gate step 2: window + speed + Gyroflow preset in one pass). The older single-speed picker is `scripts/select_window.py '<json [[slot, clip, need_src_frames, [[in,out],...]],...]>' out.json <clip folder>` (optical-flow jitter p90, speed evenness, reversals). At 48% the append needs `ceil(D*fps/24)` real-time source frames, so limit the search to windows that fit before the clip end.
 
 ## Stage 0b. What Tim expects of every B-roll shot [Tim, Mill, 9 Nov 2026]
 
@@ -80,7 +92,7 @@ The card shows a 6-frame filmstrip of the 9:16 window, a first/last onion skin, 
 ## Stage 5. Fix ladder (in order)
 
 1. Slide to a steadier part of the same clip, or re-pick another window of the same subject; re-score it.
-2. Stabilise with Gyroflow: colour the clip Orange and add a clip marker whose custom data is `{"gyroflow": {"smoothness": .., "horizon": .., "horizon_amount": .., "horizon_roll": .., "zoom_mode": "Dynamic", "zoom_window": 4, "max_zoom": ..}}`. Presets: static 0.3 + horizon lock; slow gimbal push/slide/orbit 0.5 + horizon lock; tilt reveals 0.5 + roll-only lock; handheld follow / walk-and-talk 0.8, no horizon lock. Tim's script (Workspace > Scripts > Utility > "Gyroflow Stabilize Flagged") stabilises at 100%, re-applies speed and retime settings, renders next to the source clip, places it on a "Gyroflow" track, disables the original and colours the new clip Yellow.
+2. Stabilise with Gyroflow: colour the clip Orange and add a clip marker whose custom data is `{"gyroflow": {"smoothness": .., "horizon": .., "horizon_amount": .., "horizon_roll": .., "zoom_mode": "Dynamic", "zoom_window": 4, "max_zoom": ..}}`. Presets: static 0.3 + horizon lock; slow gimbal push/slide/orbit 0.5 + horizon lock; tilt reveals 0.5 + roll-only lock; handheld follow / walk-and-talk 0.8, no horizon lock. Run it headless with `scripts/gyroflow_headless.py --project P --timeline T`. Tim's script (Workspace > Scripts > Utility > "Gyroflow Stabilize Flagged") stabilises at 100%, re-applies speed and retime settings, renders next to the source clip, places it on a "Gyroflow" track, disables the original and colours the new clip Yellow.
    - `horizon_amount` is a percentage (100 = full lock; 1.0 means 1%, effectively off). `max_zoom` is a % limit the script only passes on above 50; use 0 for no limit.
    - Reframe first, Gyroflow second: the script copies Pan, Tilt, Zoom and crop onto the stabilised clip. It refuses camera files with no gyro data (REQUIRE_GYRO), so only flag shots whose file has motion data (Sony rtmd track) and list the rest for Tim.
    - Check verticals after stabilising: horizon lock levels the gyro horizon, not the room, so a shot can still lean 1-1.5 deg. Level it with RotationAngle and the smallest zoom that hides the corners (Tim, Green C3: zoom 1.06-1.09 for 1.0-1.4 deg) [Tim, 29 Oct 2026].

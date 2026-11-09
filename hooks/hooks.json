@@ -1,0 +1,13 @@
+{
+  "description": "beon-edit B-roll gate: Resolve scripts that place B-roll must slow it, retime it and flag it for Gyroflow.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__.*[Rr]esolve.*__run_script.*",
+        "hooks": [
+          { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/broll_guard.py\"", "timeout": 10 }
+        ]
+      }
+    ]
+  }
+}

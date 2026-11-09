@@ -2,7 +2,7 @@
 name: house-rules
 description: "This skill should be used at the start of any editing job for Tim at Beon Media (DaVinci Resolve concept videos, interviews, B-roll, colour grading, footage sorting), when Tim says \"start the edit\", \"put together concept X\", \"help me with the A-roll / B-roll / grade\", \"learn my edit\", or when deciding which Beon editing skill applies. It holds the working agreement, the opening grilling checklist and the map of the other skills.\n"
 metadata:
-  version: "0.3.0"
+  version: "0.3.1"
 ---
 
 # Beon edit: house rules
@@ -19,7 +19,7 @@ How to work with Tim on any edit. Read this first, then load the skill for the s
 | 1 | Footage Prep app (`footage-prep` MCP) | Every shoot, before any B-roll pick: import, analyse, pick from its selects (broll-qaqc Stage 0) |
 | 1 | shotlog | Any footage task: read the shoot's log first, write back after |
 | 2 | aroll-cut | Story beats and the interview cut (the "meat") |
-| 3–5 | broll-qaqc | Picking, placing, measuring and fixing B-roll |
+| 3–5 | broll-qaqc | Picking, placing, measuring and fixing B-roll. Its HARD GATE runs on every pass: broll_auto.py → snippet → gyroflow_headless.py → broll_gate.py PASS |
 | 6 | colour-grade | Grading with Tim's template and the scopes |
 | 7 | subtitles | Captions: style test with Tim first, then Fluid Reveal Words subs, resync after edits |
 | 7 | finish-pass | What Tim does at the end, and how to set the edit up for it |
