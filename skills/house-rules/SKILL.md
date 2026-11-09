@@ -2,7 +2,7 @@
 name: house-rules
 description: "This skill should be used at the start of any editing job for Tim at Beon Media (DaVinci Resolve concept videos, interviews, B-roll, colour grading, footage sorting), when Tim says \"start the edit\", \"put together concept X\", \"help me with the A-roll / B-roll / grade\", \"learn my edit\", when deciding which Beon editing skill applies, or whenever any other beon-edit stage skill is about to start and no job card exists for this job yet. It holds the working agreement, the mandatory opening grilling and job card, and the map of the other skills.\n"
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # Beon edit: house rules
@@ -24,7 +24,7 @@ How to work with Tim on any edit. Read this first, then load the skill for the s
 | 6 | colour-grade | Grading with Tim's template and the scopes |
 | 7 | subtitles | Captions: style test with Tim first, then Fluid Reveal Words subs, resync after edits |
 | 7 | finish-pass | What Tim does at the end, and how to set the edit up for it |
-| 8 | learn-from-tim | After Tim finishes or asks to "learn": read his version, compare, ask why |
+| all, then 8 | learn-from-tim + `beon-edit:learner` agent | Always on: log every correction and piece of knowledge in the lessons inbox as it's given; at the end of every job, the learner proposes rules, Tim approves, then the plugin is updated |
 
 Typical order: brief → client profile → grill → job card → Footage Prep → ingest/shot log → A-roll → QA → Tim reviews → B-roll select and place → pacing gate → QA → Tim watch-down → grade → QA → subtitles → QA → final QA on the render → Tim's finish → learn.
 
@@ -68,8 +68,10 @@ Tim: every concept is different, and jobs have started without him being asked. 
 - When Tim leaves a job running, run the QA loop (qa-loop) on every stage until it passes or escalates after 3 rounds, keep a progress log, and schedule resume reminders (scheduled tasks) in case the session limit hits. Delete the reminders when finished.
 - Go fast: drop steps that don't add quality, split independent analysis across agents, reuse the shot log instead of re-analysing. Follow the fast path and the VM and API gotchas in `references/resolve-recipes.md` (ingest once, `cut_pieces.py`, one `run_script` per stage, measure outside Resolve).
 
-## Learning
+## Learning (always on) [Tim, 9 Nov 2026]
 
-- Keep learning Tim's style and apply it to every future edit. After each job, run learn-from-tim.
+- Every job keeps a lessons inbox (job card `Lessons inbox:`). While a job is open, the `learn_listener` hook reminds you on every message: when Tim (or the editor) corrects the edit, says how something should be done, or explains why, log it right away with its kind: general (every client), client (only this client), concept (only this video, never the plugin), or unsure (ask at the end). learn-from-tim section 0.
+- At the end of every job: the `beon-edit:learner` agent turns the inbox and Tim's finished version into proposals; Tim approves, changes or drops each one (at most 4 questions, batched at the end); only then is the plugin changed, versioned and pushed. learn-from-tim sections 3-5.
+- Only Tim turns a lesson into a general or client rule. Other editors' lessons wait for him (a pull request or `pending-for-tim.md`).
 - Rules confirmed by Tim beat rules inferred from one example. When a rule was inferred from a single case, treat it as a default and ask when it matters.
-- The full rulebook with Tim's marks lives on the "Tim's Edit System" artifact page and in the project docs.
+- The plugin is the only real copy of the rules. The "Tim's Edit System" artifact page shows them and collects Tim's marks, which come back through learn-from-tim.

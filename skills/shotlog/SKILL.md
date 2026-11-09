@@ -12,7 +12,7 @@ Goal: never analyse the same footage twice. Every shoot folder gets a `_shotlog/
 ## Location
 
 - `<shoot folder>/_shotlog/` inside Tim's Dropbox (e.g. `Namir Mikha/[01. Content]/Videography/1. SHOOTS/2026/Shoot 16. Bishop St/_shotlog/`).
-- Small text only: `jobs/` (one job card per concept, house-rules), `shotlog.json` (source of truth, schema `beon-shotlog/1`), `shotlog.csv` (one row per clip), `README.md`, `transcripts/` (word-timed JSON), `plans/` (concept cut plans), `tools/` (analysis scripts used).
+- Small text only: `jobs/` (one job card per concept, house-rules), `lessons/` (one lessons inbox per concept, learn-from-tim), `qa/` (QA rounds per concept, qa-loop), `shotlog.json` (source of truth, schema `beon-shotlog/1`), `shotlog.csv` (one row per clip), `README.md`, `transcripts/` (word-timed JSON), `plans/` (concept cut plans), `tools/` (analysis scripts used).
 - Never put media, thumbnails, motion cards or renders here (they sync to the team). Images go in the device VM scratch, or a non-Dropbox connected folder when they must be staged to view.
 
 ## Before any footage task

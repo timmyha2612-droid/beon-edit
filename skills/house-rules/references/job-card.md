@@ -19,6 +19,9 @@ with the pop-up question tool, update the card, then write the session copy. Don
 # Job: <client> <concept>
 Card: <path to the real card in _shotlog/jobs/>
 Kind: concept | footage-sort | subtitles-only | grade-only | fix
+Editor: Tim | <name of the editor running this job>
+Client: <client profile name, e.g. namir-mikha>
+Lessons inbox: <shoot>/_shotlog/lessons/<concept>.jsonl
 Date: <YYYY-MM-DD>
 Grilling: done with Tim | skipped (Tim said "<his words>")
 
