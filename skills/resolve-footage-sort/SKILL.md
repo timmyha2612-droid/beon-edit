@@ -1,11 +1,19 @@
 ---
 name: "resolve-footage-sort"
-description: "Sort a DaVinci Resolve bin of raw footage into numbered content bins and log audio and interviews, using the davinci-resolve MCP plus local ffmpeg."
+description: "Sort a DaVinci Resolve bin of raw footage into numbered content bins and log audio and interviews, using Footage Prep first, the davinci-resolve MCP and local ffmpeg."
+metadata:
+  version: "0.2.0"
 ---
 
 # Resolve footage sort
 
+> **Job card first.** Before any work in this skill, make sure this job has a job card (house-rules, "Grill first"). No card: stop and run the grilling with Tim. The `job_guard` hook blocks Resolve edits without one.
+
 Use when Tim asks to sort, organise or log raws in a Resolve project (Beon Media client shoots).
+
+## 0. Footage Prep and the job card
+- A footage sort is a job too: ask Tim the scope questions below with the pop-up question tool and write a short job card (`Kind: footage-sort`, house-rules) before moving anything.
+- Put the shoot through Footage Prep first (`house-rules/references/footage-prep.md`). Its movement labels, flags and tiers help name and fill the bins (e.g. a `reject` clip goes in a Junk bin, not a content bin). Not reachable: tell Tim in one line and use the fallback below.
 
 ## 1. Scope
 - Ask which project and bin, and confirm the project is open in Resolve. If Tim is actively editing, avoid switching timelines.
@@ -13,7 +21,7 @@ Use when Tim asks to sort, organise or log raws in a Resolve project (Beon Media
 - Raws usually live on the T7 drive (`/Volumes/T7 Shield/Raws/<Client>/<Month>/...`) or in Dropbox. Prefer the T7 copy. If a Dropbox path can't be requested, ask Tim to add the folder with Add folder.
 
 ## 2. Look at the shots (cheap)
-- Run `shotlog/scripts/ingest.py` in device_bash (probe, gyro, 4 keyframes per clip, contact sheets of 8 clips) with the sheets going to `_claude_thumbs/` inside a connected T7 folder (never inside Dropbox, so nothing syncs to the team). Repeat the call until it prints DONE.
+- Use Footage Prep's analysis when it has the shoot. Otherwise (or for what it doesn't cover) run `shotlog/scripts/ingest.py` in device_bash (probe, gyro, 4 keyframes per clip, contact sheets of 8 clips) with the sheets going to `_claude_thumbs/` inside a connected T7 folder (never inside Dropbox, so nothing syncs to the team). Repeat the call until it prints DONE.
 - Stage only the sheets and read them. The same pass seeds the shot log, so nothing gets decoded twice.
 
 ## 3. Bins

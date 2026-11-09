@@ -7,6 +7,8 @@ metadata:
 
 # Colour grade (Tim's workflow)
 
+> **Job card first.** Before any work in this skill, make sure this job has a job card (house-rules, "Grill first"). No card: stop and run the grilling with Tim. The `job_guard` hook blocks Resolve edits without one.
+
 ## The template
 
 - Start every shot from Tim's template still at Temp 0, Tint 0 and HDR Global 0. Follow the node tree exactly; never add, remove or reorder nodes.

@@ -26,7 +26,7 @@ Sources: Oct C1 "Meet the Team: Azar" and Oct C3 "5 Reasons to Rent" (Claude's f
 - Questions cut. [Tim, Oct C1]
 
 ## B-roll
-- People B-roll 50-60% (Oct C1 used 55%), facade and hero shots 48%, optical flow; shaky shots go through Gyroflow. [Tim]
+- Speeds: 100% unless there's a valid reason to slow (general rule, Tim 9 Nov 2026). Was "people 50-60% (Oct C1 55%), facade and hero shots 48%" [Tim, Oct C1]: hero shots can still breathe (reason `hero`); ask Tim whether Arriva keeps the rest. Shaky shots go through Gyroflow. [Tim]
 - About 50-60% coverage on Meet the Team (Oct C1 first cut: 56%). [inferred]
 - C3-type concepts: light inserts at real speed only. [Tim, Oct C3]
 
@@ -38,6 +38,9 @@ Sources: Oct C1 "Meet the Team: Azar" and Oct C3 "5 Reasons to Rent" (Claude's f
 
 ## Ending and brand
 - End card or logo at the end: ask (C3 used an overlay line; C1 ended on outro B-roll).
+
+## Subtitles
+- Look: ask. C3 used reason cards as overlay text (Oct C3); no caption style learned yet.
 
 ## Grade
 - Same 9-node tree; gallery still "Tim's Color Grading Node Tree #1_1" (it holds Temp 70 and HDR −1.00: reset to 0/0/0 before use). [inferred]

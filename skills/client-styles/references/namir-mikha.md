@@ -27,8 +27,8 @@ Sources: C6 "Full-Circle Story", C1, C7 (Simon), learned 14-15 Oct 2026. Details
 - Jokes: ask per concept; default keep the speaker on camera. [Tim]
 
 ## B-roll
-- Coverage about 50/50; walkthrough pieces run heavier (C7 64%). Open each speaker turn on camera 1.5-2 s. [Tim / C7]
-- Speeds: 50p empty-house shots at 48% (down to ~30% to hide shake); people at 50-60%. [Tim]
+- Speaker on screen max 4 s at a time (general rule, Tim 9 Nov 2026); earlier finals ran about 50/50, walkthroughs heavier (C7 64%). Open each speaker turn on camera 1.5-2 s. [Tim / C7]
+- Speeds: 100% unless there's a valid reason to slow (general rule, Tim 9 Nov 2026: shake, match, stretch, hero; floors 48% / people moving 60% / talking 80%). Was "50p empty-house at 48%, people 50-60%" [Tim, C6]: ask Tim whether Namir keeps the old habit.
 - Match literally: show what's named, and the person being talked about. A line about a specific room or light shows that room. [Tim]
 - Goofy people moments only under light lines (Namir on the Pilates reformer under a serious line was wrong). [Tim, C6]
 - Avoid: blown hot spots as the subject, weak static shots held long (C7 R14), videographer move resets (C6 0334). [Tim]
@@ -42,6 +42,9 @@ Sources: C6 "Full-Circle Story", C1, C7 (Simon), learned 14-15 Oct 2026. Details
 ## Ending and brand
 - B-roll carries about 4 s past the last word over music, starting just before speech ends. [inferred, C7]
 - Standard tail card `[03. Assets]/Logos/Namir Reel Tail_Standard.png`, 65 frames, music running about 0.6 s past it. Same on C6, C1, C7. [inferred, repeated]
+
+## Subtitles
+- Look: ask (no captions on Namir reels so far; first job with captions: scan the project's timelines, then confirm with Tim).
 
 ## Grade
 - Tim's 9-node template; only Balance (Temp, Tint) and HDR Global change. Neutrals about Cb −5, Cr +5; main white surface about 896. [Tim]

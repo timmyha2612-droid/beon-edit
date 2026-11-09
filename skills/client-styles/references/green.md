@@ -34,6 +34,9 @@ Tags: [Tim] confirmed by Tim · [inferred] measured from his finals, not confirm
 ## Ending and brand
 - End card "Compound Clip 1" ~2.5 s at the end [inferred] (C1, C3, Sep C2, Concept 4).
 
+## Subtitles
+- Style copy tested on Green Oct2 C3: Metropolis, size 0.06, with Fluid Reveal Words (29 Oct 2026) [inferred, test, not a confirmed Green look]. Sep C2 had Text+ on V3. Confirm with Tim before building.
+
 ## Grade
 - Tim grades [Tim] (Oct shoot 2).
 

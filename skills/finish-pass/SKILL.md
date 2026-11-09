@@ -7,6 +7,8 @@ metadata:
 
 # Finish pass
 
+> **Job card first.** Before any work in this skill, make sure this job has a job card (house-rules, "Grill first"). No card: stop and run the grilling with Tim. The `job_guard` hook blocks Resolve edits without one.
+
 Tim does the final cut and music pass himself. Claude's job is to hand over an edit that's ready for it, and to help with music, the break and the ending when he asks.
 
 ## What Tim does himself (don't do these unless asked)
