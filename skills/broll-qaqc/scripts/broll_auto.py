@@ -140,6 +140,7 @@ def main():
     ap.add_argument("slots"); ap.add_argument("clipdir")
     ap.add_argument("-o", default="broll_plan.json"); ap.add_argument("--snippet")
     ap.add_argument("--tl-fps", type=float, default=24.0)
+    ap.add_argument("--why", action="store_true", help="print the best window at every speed")
     a = ap.parse_args()
     slots = json.load(open(a.slots))
     plan = []
@@ -183,6 +184,11 @@ def main():
                             + 0.15 * max(0, m["v"] - 10))
                     if spd not in best_by or cost < best_by[spd][0]:
                         best_by[spd] = (cost, spd, t0, n_src, m)
+        if a.why:
+            for spd_, c_ in sorted(best_by.items(), reverse=True):
+                mm = c_[4]
+                print(f"   {sl['slot']} @{spd_}% {c_[2]:.2f}s jit {mm['jit']:.2f} v {mm['v']:.1f} cv {mm['cv']:.2f} "
+                      f"rev {mm['rev']:.2f} sharp {mm['sharp']:.2f} luma {mm['luma']:.1f}")
         # Tim's ladder: the house speed first; slow down only if it doesn't pass clean.
         best = None
         for spd in sorted(best_by, reverse=True):
