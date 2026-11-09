@@ -39,8 +39,8 @@ he overrode, and the learning loop learns from that.
   - Everything else: down to 48%.
   - Below 48% only for 100 fps footage (down to 25%).
 - Retime: Optical Flow on every slowed shot; Speed Warp Better below 48%.
-- Client profiles that still say "48% first" predate this rule; this rule wins unless Tim confirms the old
-  one for that client.
+- The Namir and Arriva profiles used to say "48% first"; they now follow this rule, with a note to ask
+  Tim whether those clients keep the old habit. Until he answers, use this rule.
 
 ## 3. Gyroflow [Tim, Mill + Green, Oct-Nov 2026]
 
