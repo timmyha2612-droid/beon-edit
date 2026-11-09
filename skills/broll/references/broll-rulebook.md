@@ -27,7 +27,10 @@ he overrode, and the learning loop learns from that.
 ## 2. Speed [Tim, 9 Nov 2026]
 
 - **Default 100%.** Slow down (anywhere from 48% to 100%) only with a valid reason:
-  1. `shake`: calm shake or jerkiness Gyroflow didn't fully fix.
+  1. `shake`: calm shake or jerkiness Gyroflow didn't fully fix. Never on a shot Footage Prep calls
+     `locked`/`steady` with gyro `metrics.stability` >= 0.95: the camera didn't move, so whatever moves in
+     frame is the subject (people talking or turning, cars), not shake. Those play at 100% [10 Nov 2026,
+     Hired Home C0168 was slowed to 48% for Nicole turning on a locked-off shot].
   2. `match`: match the camera speed of the shots before and after (be versatile: a fast push between two
      slow ones gets slowed so the run feels even).
   3. `stretch`: the speaker would otherwise stay on screen longer than 4 s and there's no more B-roll.

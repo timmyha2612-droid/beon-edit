@@ -15,6 +15,9 @@ SLOTS.json: [{"slot": "B6", "clip": "C0185", "rec": 74,            # timeline fr
               "sel_frames": [[275, 528], ...],                      # footage-prep `selects` in_frame/out_frame (preferred)
               "sel": [[5.5, 10.56], ...],                           # or select windows in source seconds
               "movement": "pan_tilt",                               # footage-prep movement label (sets the Gyroflow preset)
+              "stability": 0.996,                                   # footage-prep metrics.stability; locked/steady
+                                                                    #   at >= 0.95 = camera still: never slowed for
+                                                                    #   shake, subject motion doesn't REJECT
               "x": 0.48, "zoom": 1.0,                               # 9:16 window (subject centre, zoom)
               "at": 635,                                            # timeline frame offset (for --snippet)
               "people": false,                                      # "talking" (>= 80%) | "moving" (>= 60%) | false
@@ -177,10 +180,22 @@ def clean(m):
     return m["jit"] < 1.0 and m["rev"] <= 0.15 and m["cv"] <= 0.6 and m["sharp"] >= 0.6 and m["luma"] <= 15
 
 
+STILL_STAB = 0.95   # Footage Prep gyro stability at or above this on a locked/steady shot = the camera is still
+
+
+def gyro_still(sl):
+    """Footage Prep's gyro says the camera didn't move (Tim, 10 Nov 2026). Optical flow then only sees the
+    subject (people talking, turning, cars), which isn't shake, so it's no reason to slow the shot."""
+    return sl.get("movement") in ("locked", "steady") and float(sl.get("stability") or 0) >= STILL_STAB
+
+
 def choose(best_by, base, sl, forced):
     """Pick the speed and name the reason (rulebook section 2)."""
     if not best_by:
         return None, None
+    if (forced is None and gyro_still(sl) and base in best_by
+            and not sl.get("hero") and sl.get("match_v") is None):
+        return best_by[base], base_reason(base)
     if forced is not None:
         c = best_by.get(float(forced))
         return (c, sl.get("speed_reason") or ("cadence" if float(forced) == base == 96 else "none")) if c else (None, None)
@@ -304,12 +319,16 @@ def main():
         cost, spd, t0, n_src, m = best
         sf = int(round(t0 * fps))
         app_len = int(math.ceil(sl["rec"] * fps / a.tl_fps))  # append real-time length, then SetSpeed
+        still = gyro_still(sl)                               # flow motion = the subject, not the camera
+        if sl.get("movement") in ("locked", "steady") and sl.get("stability") is None and reason == "shake":
+            print(f"{sl['slot']:<8} WARNING slowed for shake on a {sl['movement']} shot with no `stability`: "
+                  f"pass Footage Prep's metrics.stability (>= {STILL_STAB} = subject motion, plays at 100%)", flush=True)
         bad = []
-        if m["rev"] > 0.15: bad.append("reversal")
+        if m["rev"] > 0.15 and not still: bad.append("reversal")
         if m["sharp"] < 0.6: bad.append("soft")
         if m["luma"] > 15: bad.append("exposure")
-        if m["cv"] > 0.6: bad.append("uneven")
-        t = tier(m["jit"])
+        if m["cv"] > 0.6 and not still: bad.append("uneven")
+        t = "pass" if still else tier(m["jit"])
         static = sl.get("movement") in ("locked", "steady") or m["v"] < 0.4
         dz = None
         if static:
@@ -328,7 +347,9 @@ def main():
         retime = None if spd >= 99.5 else ("nearest" if reason == "cadence" else "optical_flow")
         why = dict(line=sl.get("line", ""),
                    move=(sl.get("movement") or "measured") + f", camera speed {m['v']:.1f} px/frame"
-                        + (", static" if static else ""),
+                        + (", static" if static else "")
+                        + (f" (Footage Prep gyro stability {float(sl['stability']):.3f}: camera still, "
+                           f"measured motion is the subject)" if still else ""),
                    speed=speed_text(spd, reason, sl, m),
                    speed_reason=reason,
                    gyro=(f"preset {gf['smoothness']}" + (" + horizon lock" if gf.get("horizon") else " no lock")
