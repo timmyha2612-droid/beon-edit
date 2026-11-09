@@ -16,7 +16,10 @@ import sys
 BASE = (sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/subs_work")).rstrip("/") + "/"
 MAX_LINE, MAX_WORDS, MAX_FRAMES = 28, 12, 118
 IN_DUR, OUT_DUR, LAST_OUT, LEAD, MIN_SHOW, MIN_GAP = 18, 4, 0, 2, 6, 4
-SNAP = 6  # a caption start this close to a picture cut moves onto the cut (Tim, Simone C03)
+# A caption start moves onto a picture cut (Tim, Simone C03, 3 Nov 2026) only when the cut is up to
+# SNAP_BEFORE frames before its first spoken word or SNAP_AFTER frames after it. Speech comes first
+# (Tim, 4 Nov 2026): further off, the caption keeps the speech timing.
+SNAP_BEFORE, SNAP_AFTER = 8, 6
 
 
 def norm(t):
@@ -99,7 +102,7 @@ def main():
                         "matched": matched, "tokens": len(text.split())})
         cut_frames = sorted({s for s, _ in d.get("cuts", [])} - {0})
         for n, c in enumerate(out):
-            near = [f for f in cut_frames if abs(f - c["start"]) <= SNAP]
+            near = [f for f in cut_frames if -SNAP_BEFORE <= f - c["start"] <= SNAP_AFTER]
             if n and near:
                 snapped = min(near, key=lambda f: abs(f - c["start"]))
                 if out[n - 1]["start"] < snapped:

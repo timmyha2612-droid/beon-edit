@@ -92,3 +92,7 @@ Rules were learned from Namir Mikha C6, C1 and C7 and reviewed by Tim on the "Ti
 0.18.1 (10 Nov 2026): broll_auto trusts Footage Prep's gyro on still shots.
 - Slots take `stability` (Footage Prep `metrics.stability`). A `locked`/`steady` shot at >= 0.95 is never slowed for `shake` and never rejected as uneven or reversing: the camera didn't move, so the optical-flow motion is the subject (Hired Home C0168, Nicole turning on a locked-off shot, was slowed to 48%). `hero` and `match` still apply. A locked/steady slot without `stability` that gets slowed for shake prints a warning.
 - broll scripts need numpy, opencv-python-headless and scipy in the Python that runs them (`python3 -m pip install numpy opencv-python-headless scipy`).
+
+0.18.2 (10 Nov 2026): subtitles, speech comes first [Tim, 4 Nov 2026].
+- A caption still goes up on its first spoken word. plan_captions.py snaps a start onto a picture cut only when the cut is up to 8 frames before the word or 6 frames after it (was ±6 either way); further off, the speech timing stays (Simone C03g had captions up to 35 frames off their words).
+- QA: S-03 allows that exception; new S-11 checks every caption start against its first word on the timeline's own audio.
