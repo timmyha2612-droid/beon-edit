@@ -171,6 +171,10 @@ def main():
                     t1 = t0 + n_src / fps
                     if any(t0 < e and t1 > s for s, e in avoid):
                         continue
+                    # Gyroflow Stabilize Flagged renders the shot at 100% (+1 s handles) and re-applies the
+                    # speed, so the clip needs the full real-time length + 1 s after the in point.
+                    if t0 + sl["rec"] / a.tl_fps + 1.0 > dur - 0.02:
+                        continue
                     m = score(d, sharp, luma, s0, n_src, step, zoom, med)
                     if m is None:
                         continue
