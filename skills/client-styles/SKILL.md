@@ -2,7 +2,7 @@
 name: client-styles
 description: "This skill should be used at the start of any Beon Media edit for a named client (Namir Mikha, Arriva, Green, Beon's own shorts, Ray White, Jack Ho, Funds Now, Prestige, or a new one), before the opening grilling, and whenever Tim says \"do it the Namir way\", \"Arriva style\", \"what's our usual for this client\", \"set up a profile for this client\" or finishes a client concept worth learning from. Holds one style profile per client: format, length, structure, A-roll, B-roll, audio, music, ending, grade, subtitle look, brand rules and where the footage lives.\n"
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
 ---
 
 # Client style profiles
@@ -33,8 +33,10 @@ When the profile and a stage skill disagree, the profile wins for that client. W
 
 ## Keeping profiles current
 
-- After Tim finishes a concept (learn-from-tim), add or adjust the client's rules with numbers from his final: length, speech time, coverage, speeds, grade values, music timings, end card.
+- After Tim finishes a concept, the learner agent turns the numbers from his final (length, speech time, coverage, speeds, grade values, music timings, end card) into client lessons; they reach the profile only after Tim's yes (learn-from-tim).
 - A rule seen in two or more of Tim's finals with no counter-example can be marked [inferred, repeated]. Only Tim's word makes it [Tim].
+- The same rule in two or more client profiles with no counter-example in the others: the learner agent suggests it as a general rule (`lessons.py repeats`); Tim decides (Q17).
+- Client lessons reach a profile only through learn-from-tim: logged in the job's lessons inbox, proposed by the learner, approved by Tim.
 - Keep each profile short, one line per rule. Put long analyses in the project docs and link the doc name.
 - Never write client footage, stills or renders into the plugin. Profiles are text only.
 
