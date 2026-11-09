@@ -17,7 +17,14 @@ SLOTS.json: [{"slot": "B6", "clip": "C0185", "rec": 74,            # timeline fr
               "movement": "pan_tilt",                               # footage-prep movement label (sets the Gyroflow preset)
               "x": 0.48, "zoom": 1.0,                               # 9:16 window (subject centre, zoom)
               "at": 635,                                            # timeline frame offset (for --snippet)
-              "people": false,                                      # people moving -> 50-60%, no 30%
+              "people": false,                                      # "talking" (>= 80%) | "moving" (>= 60%) | false
+              "line": "the finishes are all custom",               # words the shot covers (goes into `why`)
+              "subject": "stone benchtop",                         # what the Pan centres (goes into `why`)
+              "match_v": 3.2,                                       # optional: camera speed (px/frame) of the
+                                                                    #   neighbouring shots -> speed reason `match`
+              "hero": false,                                        # optional: hero/mood shot -> may breathe
+              "speed": 70, "speed_reason": "match",                 # optional: force a speed (reason required)
+              "static_dz": "in", "dz_amount": 0.04,                 # optional: Dynamic Zoom for static shots
               "avoid": [[6.0, 7.5]]}, ...]                          # source ranges already used (optional)
   "sel" may be omitted: then the whole clip minus 1 s each end.
 
@@ -27,19 +34,30 @@ What it measures, all at OUTPUT timing (after the slow-down, inside the 9:16 win
   rev   share of frames moving against the main direction (a reset or a change of move)
   sharp min Laplacian in the window vs the clip's median (< 0.6 = focus pull / blur)
   luma  range of mean brightness (> 12 = exposure jump)
-Speeds tried: 48 / 40 / 30 % (empty house; 48 preferred), 60 / 50 % with "people".
-On a 24p timeline 50p at <= 48% needs no invented frames; 100 fps clips go to 25%.
+Speed (Tim, 9 Nov 2026, references/broll-rulebook.md section 2): 100% unless there's a valid reason,
+25p footage 96% Nearest (`cadence`). It only goes slower for a reason, printed per slot:
+  shake    100% isn't clean (jitter/uneven), so the highest speed that is clean
+  match    `match_v` given: the clean speed whose camera speed is closest to the neighbours'
+  stretch  no window of the select is long enough at 100%
+  hero     `hero: true`: the slowest clean speed (a shot that should breathe)
+Floors: people talking 80%, people moving 60%, else 48%, 100 fps clips 25%.
 
 Treatment (printed per slot):
-  speed + Retime (Optical Flow, Speed Warp Better below 48%)
+  speed + reason + Retime (none at 100%, Nearest at 96% cadence, Optical Flow, Speed Warp Better below 48%)
+  zoom peak (zoom x Dynamic Zoom) against the pixelation limits (UHD 1.25 / 1.4, 1080-high 1.0 / 1.15);
+  the Gyroflow crop isn't known before the render, so check stabilised shots on a still
+  static shots: a Dynamic Zoom to add (3-5%, in or out by the shot), listed by --snippet
   gyroflow preset (Tim's presets) when the file has a gyro track (Sony rtmd), else "no gyro: list for Tim"
   REJECT when even the best window is still 'fix' after slowing (Gyroflow can't save reversals,
   focus pulls, walking bob): re-pick another select for that line.
+Every row carries `why` (line, move, speed, gyro, pan, dynamic_zoom): the reason record the gate and the
+QA checks read, and the hook requires in any B-roll placement script.
 --snippet writes a ready-to-paste run_script body that appends the shots on V2 with the chosen
-source range, speed, retime, Pan/Zoom, Orange colour and the Gyroflow marker (marker before retime).
+source range, speed (only when slowed), retime, Pan/Zoom, Orange colour and the Gyroflow marker (marker
+before retime), plus the reason records.
 Then run gyroflow_headless.py, then shake_check.py on a proxy render to confirm.
 """
-import argparse, json, math, subprocess, sys
+import argparse, json, math, pprint, subprocess, sys
 import numpy as np
 import cv2
 
@@ -48,18 +66,20 @@ W, H = 384, 216
 
 def probe(path):
     out = subprocess.run(["ffprobe", "-v", "error", "-show_entries",
-                          "stream=codec_type,codec_tag_string,r_frame_rate:format=duration",
+                          "stream=codec_type,codec_tag_string,r_frame_rate,height:format=duration",
                           "-of", "json", path], capture_output=True, text=True).stdout
     j = json.loads(out)
     fps = 50.0
     gyro = False
+    height = 2160
     for s in j.get("streams", []):
         if s.get("codec_type") == "video":
             n, d = s["r_frame_rate"].split("/")
             fps = float(n) / float(d)
+            height = int(s.get("height") or height)
         if s.get("codec_tag_string") == "rtmd":
             gyro = True
-    return fps, gyro, float(j["format"]["duration"])
+    return fps, gyro, float(j["format"]["duration"]), height
 
 
 def decode(path, a, b):
@@ -135,6 +155,82 @@ def preset(m, people, movement=None):
     return {"smoothness": 0.5, "horizon": True, "horizon_amount": 100}      # slide / push / orbit
 
 
+REASONS = {"shake", "match", "stretch", "hero", "cadence"}
+
+
+def speed_ladder(fps, people):
+    """Tim, 9 Nov 2026: 100% unless there's a reason; floors by what's in the shot."""
+    base = 96.0 if 23.5 < fps < 26 else 100.0           # 25p on a 24p timeline: 96% Nearest, every frame once
+    if people == "talking":
+        floor = 80.0
+    elif people:
+        floor = 60.0
+    elif fps >= 90:
+        floor = 25.0
+    else:
+        floor = 48.0
+    ladder = [base] + [float(s) for s in (90, 80, 70, 60, 55, 48, 40, 30, 25) if s < base and s >= floor]
+    return base, floor, ladder
+
+
+def clean(m):
+    return m["jit"] < 1.0 and m["rev"] <= 0.15 and m["cv"] <= 0.6 and m["sharp"] >= 0.6 and m["luma"] <= 15
+
+
+def choose(best_by, base, sl, forced):
+    """Pick the speed and name the reason (rulebook section 2)."""
+    if not best_by:
+        return None, None
+    if forced is not None:
+        c = best_by.get(float(forced))
+        return (c, sl.get("speed_reason") or ("cadence" if float(forced) == base == 96 else "none")) if c else (None, None)
+    cleans = [c for c in best_by.values() if clean(c[4])]
+    if sl.get("hero") and cleans:
+        c = min(cleans, key=lambda c: c[1])
+        return c, ("hero" if c[1] < base else base_reason(base))
+    if sl.get("match_v") is not None and cleans:
+        c = min(cleans, key=lambda c: (abs(c[4]["v"] - float(sl["match_v"])), -c[1]))
+        return c, ("match" if c[1] < base else base_reason(base))
+    for spd in sorted(best_by, reverse=True):
+        c = best_by[spd]
+        if clean(c[4]):
+            if spd >= base:
+                return c, base_reason(base)
+            return c, ("shake" if base in best_by else "stretch")
+    c = min(best_by.values(), key=lambda c: c[0])         # nothing clean: least bad, flagged by the action
+    if c[1] >= base:
+        return c, base_reason(base)
+    return c, ("shake" if base in best_by else "stretch")
+
+
+def base_reason(base):
+    return "cadence" if base == 96 else "none"
+
+
+def speed_text(spd, reason, sl, m):
+    if reason == "none":
+        return "100%: no reason to slow"
+    if reason == "cadence":
+        return "96% Nearest: 25p on a 24p timeline, every frame plays once"
+    if reason == "shake":
+        return f"{spd:g}%: shake/jerkiness at the faster speeds (jitter {m['jit']:.2f} px at this speed)"
+    if reason == "match":
+        if sl.get("match_v") is None:
+            return f"{spd:g}%: matches the neighbours' camera speed (forced; camera speed here {m['v']:.1f} px/frame)"
+        return f"{spd:g}%: matches the neighbours' camera speed ({m['v']:.1f} vs {float(sl['match_v']):.1f} px/frame)"
+    if reason == "stretch":
+        return f"{spd:g}%: the select is too short to fill the slot at 100%"
+    if reason == "hero":
+        return f"{spd:g}%: hero/mood shot, let it breathe"
+    return f"{spd:g}%: {reason}"
+
+
+def zoom_tier(peak, height):
+    """Rulebook section 5: UHD fine to 1.25, check to 1.4; 1080-high fine to 1.0, check to 1.15."""
+    fine, fail = (1.25, 1.4) if height >= 2000 else (1.0, 1.15)
+    return "ok" if peak <= fine + 1e-6 else ("check" if peak <= fail + 1e-6 else "fail")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("slots"); ap.add_argument("clipdir")
@@ -148,13 +244,23 @@ def main():
     for sl in slots:
         clip = sl["clip"]
         path = f"{a.clipdir.rstrip('/')}/{clip}.MP4"
-        fps, gyro, dur = probe(path)
+        fps, gyro, dur, height = probe(path)
         if sl.get("sel_frames"):                             # straight from footage-prep `selects` (in_frame/out_frame)
             sels = [[a_ / fps, b_ / fps] for a_, b_ in sl["sel_frames"]]
         else:
             sels = sl.get("sel") or [[1.0, dur - 1.0]]
         x, zoom = sl.get("x", 0.5), sl.get("zoom", 1.0)
-        speeds = [60, 50] if sl.get("people") else ([25, 30, 40, 48] if fps >= 90 else [48, 40, 30])
+        people = sl.get("people")
+        if people is True:
+            people = "moving"
+        base, floor, ladder = speed_ladder(fps, people)
+        forced = sl.get("speed")
+        if forced is not None:
+            if sl.get("speed_reason") not in REASONS and float(forced) < base:
+                sys.exit(f"{sl['slot']}: speed {forced}% needs speed_reason, one of {sorted(REASONS)}")
+            if float(forced) < floor:
+                print(f"{sl['slot']:<8} WARNING forced {forced}% is below the {floor}% floor for this shot", flush=True)
+            ladder = [float(forced)]
         avoid = sl.get("avoid", [])
         best_by = {}                                         # speed -> best window at that speed
         for a0, b0 in sels:
@@ -164,7 +270,7 @@ def main():
                 cache[key] = measure(fr, x, zoom) + (fr,)
             d, sharp, luma, fr = cache[key]
             med = float(np.median(sharp))
-            for spd in speeds:
+            for spd in ladder:
                 step = spd / 100 * fps / a.tl_fps            # source frames per output frame
                 n_src = int(math.ceil(sl["rec"] * step)) + 1
                 for s0 in range(0, len(fr) - n_src + 1, 2):
@@ -187,21 +293,13 @@ def main():
         if a.why:
             for spd_, c_ in sorted(best_by.items(), reverse=True):
                 mm = c_[4]
-                print(f"   {sl['slot']} @{spd_}% {c_[2]:.2f}s jit {mm['jit']:.2f} v {mm['v']:.1f} cv {mm['cv']:.2f} "
-                      f"rev {mm['rev']:.2f} sharp {mm['sharp']:.2f} luma {mm['luma']:.1f}")
-        # Tim's ladder: the house speed first; slow down only if it doesn't pass clean.
-        best = None
-        for spd in sorted(best_by, reverse=True):
-            c = best_by[spd]
-            m = c[4]
-            if m["jit"] < 1.0 and m["rev"] <= 0.15 and m["cv"] <= 0.6 and m["sharp"] >= 0.6 and m["luma"] <= 15:
-                best = c
-                break
-        if best is None and best_by:
-            best = min(best_by.values(), key=lambda c: c[0])
+                print(f"   {sl['slot']} @{spd_:g}% {c_[2]:.2f}s jit {mm['jit']:.2f} v {mm['v']:.1f} cv {mm['cv']:.2f} "
+                      f"rev {mm['rev']:.2f} sharp {mm['sharp']:.2f} luma {mm['luma']:.1f}"
+                      + ("  clean" if clean(mm) else ""))
+        best, reason = choose(best_by, base, sl, forced)
         if best is None:
             print(f"{sl['slot']:<8} {clip}  no window long enough in the selects", flush=True)
-            plan.append(dict(slot=sl["slot"], clip=clip, action="REPICK", why="selects too short"))
+            plan.append(dict(slot=sl["slot"], clip=clip, action="REPICK", why={"speed": "selects too short"}))
             continue
         cost, spd, t0, n_src, m = best
         sf = int(round(t0 * fps))
@@ -212,28 +310,55 @@ def main():
         if m["luma"] > 15: bad.append("exposure")
         if m["cv"] > 0.6: bad.append("uneven")
         t = tier(m["jit"])
+        static = sl.get("movement") in ("locked", "steady") or m["v"] < 0.4
+        dz = None
+        if static:
+            dz = {"dir": sl.get("static_dz") or "decide", "amount": float(sl.get("dz_amount", 0.04)), "applied": False}
+        peak = zoom * (1 + (dz["amount"] if dz else 0))
+        ztier = zoom_tier(peak, height)
+        if ztier == "fail":
+            bad.append(f"zoom {peak:.2f}x pixelates")
         if bad or (t == "fix" and not gyro):
             action = "REJECT (" + ",".join(bad or ["shaky, no gyro"]) + "): re-pick"
         elif gyro:
             action = "gyroflow" + ("" if t != "fix" else " (strong)")
         else:
             action = "use" if t == "pass" else "no gyro: list for Tim"
-        gf = preset(m, sl.get("people"), sl.get("movement")) if gyro and not action.startswith("REJECT") else None
+        gf = preset(m, people, sl.get("movement")) if gyro and not action.startswith("REJECT") else None
+        retime = None if spd >= 99.5 else ("nearest" if reason == "cadence" else "optical_flow")
+        why = dict(line=sl.get("line", ""),
+                   move=(sl.get("movement") or "measured") + f", camera speed {m['v']:.1f} px/frame"
+                        + (", static" if static else ""),
+                   speed=speed_text(spd, reason, sl, m),
+                   speed_reason=reason,
+                   gyro=(f"preset {gf['smoothness']}" + (" + horizon lock" if gf.get("horizon") else " no lock")
+                         + f" ({sl.get('movement') or 'measured move'})") if gf else
+                        ("no gyro track: list for Tim" if not gyro else "rejected shot"),
+                   pan=f"x {x:.2f} centres {sl.get('subject') or 'the subject (name it in the slot)'}",
+                   zoom=f"peak {peak:.2f}x on {height}p source: {ztier}"
+                        + ("" if not gf else " (plus the Gyroflow crop: check a still)"))
+        if dz:
+            why["dynamic_zoom"] = (f"static shot: zoom {dz['dir']} {dz['amount'] * 100:.0f}%"
+                                   + (" (pick in or out by the shot)" if dz["dir"] == "decide" else ""))
         row = dict(slot=sl["slot"], clip=clip, at=sl.get("at"), src_in=round(t0, 2), src_out=round(t0 + n_src / fps, 2),
-                   sf=sf, ef=sf + app_len, speed=spd, rec=sl["rec"], x=x, zoom=zoom,
-                   jit=round(m["jit"], 2), tier=t, v=round(m["v"], 1), cv=round(m["cv"], 2),
+                   sf=sf, ef=sf + app_len, speed=spd, retime=retime, rec=sl["rec"], x=x, zoom=zoom, fps=fps,
+                   people=people or False, jit=round(m["jit"], 2), tier=t, v=round(m["v"], 1), cv=round(m["cv"], 2),
                    rev=round(m["rev"], 2), sharp=round(m["sharp"], 2), luma=round(m["luma"], 1),
-                   gyro=gyro, action=action, gyroflow=gf)
+                   gyro=gyro, action=action, gyroflow=gf, dynamic_zoom=dz, zoom_peak=round(peak, 3),
+                   zoom_tier=ztier, why=why)
         plan.append(row)
-        print(f"{row['slot']:<8} {clip} {row['src_in']:6.2f}-{row['src_out']:6.2f}s @{spd}%  jit {row['jit']:.2f} {t:<5} "
-              f"v {row['v']:4.1f} cv {row['cv']:.2f} rev {row['rev']:.2f} sharp {row['sharp']:.2f}  -> {action}"
-              + (f" {json.dumps(gf)}" if gf else ""), flush=True)
+        print(f"{row['slot']:<8} {clip} {row['src_in']:6.2f}-{row['src_out']:6.2f}s @{spd:g}% ({reason})  "
+              f"jit {row['jit']:.2f} {t:<5} v {row['v']:4.1f} cv {row['cv']:.2f} rev {row['rev']:.2f} "
+              f"sharp {row['sharp']:.2f} zoom {peak:.2f} {ztier}  -> {action}"
+              + (f" {json.dumps(gf)}" if gf else "") + (f"  DZ {dz['dir']} {dz['amount']:.0%}" if dz else ""),
+              flush=True)
     json.dump(plan, open(a.o, "w"), indent=1)
     if a.snippet:
         write_snippet(plan, a.snippet)
 
 
 SNIP = '''# paste into run_script. Needs: tl = current timeline, rows below, clips from the shoot bin.
+# Every row carries 'why' (the reason record, Tim 9 Nov 2026); the beon-edit hook checks it's here.
 import math
 mp = project.GetMediaPool(); tl = project.GetCurrentTimeline()
 BIN = None  # set: the shoot folder object (assert '/<shoot>/' in File Path)
@@ -251,18 +376,28 @@ for r in ROWS:
     if r['gyroflow']:
         it.AddMarker(0, 'Sand', 'gyroflow', 'auto preset', 1, json.dumps({'gyroflow': r['gyroflow']}))
         it.SetClipColor('Orange')
-    it.SetSpeed({'Percentage': float(r['speed']), 'RippleTimeline': False})
-    it.SetProperty('RetimeProcess', resolve.RETIME_OPTICAL_FLOW)
-    if r['speed'] < 48: it.SetProperty('MotionEstimation', resolve.MOTION_EST_SPEED_WARP_BETTER)
-    out.append((r['slot'], it.GetStart(), it.GetEnd()))
+    if r['speed'] < 99.5:                               # 100%%: no SetSpeed, no retime
+        it.SetSpeed({'Percentage': float(r['speed']), 'RippleTimeline': False})
+        if r['retime'] == 'nearest':
+            it.SetProperty('RetimeProcess', resolve.RETIME_NEAREST)
+        else:
+            it.SetProperty('RetimeProcess', resolve.RETIME_OPTICAL_FLOW)
+            if r['speed'] < 48: it.SetProperty('MotionEstimation', resolve.MOTION_EST_SPEED_WARP_BETTER)
+    out.append((r['slot'], it.GetStart(), it.GetEnd(), r['why']['speed']))
 result = out
 '''
 
 
 def write_snippet(plan, path):
-    txt = "import json\n" + SNIP % json.dumps(plan, indent=0).replace("null", "None").replace("true", "True").replace("false", "False")
+    # a Python literal, not JSON text: reason strings may contain words like "true" or "null"
+    txt = "import json\n" + SNIP % pprint.pformat(plan, width=120, sort_dicts=False)
     open(path, "w").write(txt)
     print(f"snippet -> {path}  (set BIN; rows need 'at' = timeline frame offset, from the slot's \"at\")")
+    dz = [r for r in plan if r.get("dynamic_zoom")]
+    if dz:
+        print("Dynamic Zoom to add by hand or with the DRT clone method (static shots, rulebook section 5):")
+        for r in dz:
+            print(f"  {r['slot']} {r['clip']}: {r['why']['dynamic_zoom']}; set dynamic_zoom.applied true in the plan after")
 
 
 if __name__ == "__main__":

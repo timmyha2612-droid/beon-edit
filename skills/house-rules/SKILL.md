@@ -1,8 +1,8 @@
 ---
 name: house-rules
-description: "This skill should be used at the start of any editing job for Tim at Beon Media (DaVinci Resolve concept videos, interviews, B-roll, colour grading, footage sorting), when Tim says \"start the edit\", \"put together concept X\", \"help me with the A-roll / B-roll / grade\", \"learn my edit\", or when deciding which Beon editing skill applies. It holds the working agreement, the opening grilling checklist and the map of the other skills.\n"
+description: "This skill should be used at the start of any editing job for Tim at Beon Media (DaVinci Resolve concept videos, interviews, B-roll, colour grading, footage sorting), when Tim says \"start the edit\", \"put together concept X\", \"help me with the A-roll / B-roll / grade\", \"learn my edit\", when deciding which Beon editing skill applies, or whenever any other beon-edit stage skill is about to start and no job card exists for this job yet. It holds the working agreement, the mandatory opening grilling and job card, and the map of the other skills.\n"
 metadata:
-  version: "0.3.1"
+  version: "0.4.0"
 ---
 
 # Beon edit: house rules
@@ -13,31 +13,40 @@ How to work with Tim on any edit. Read this first, then load the skill for the s
 
 | Stage | Skill | Use when |
 |---|---|---|
-| 0 | house-rules | Every job: working agreement, grilling, routing |
+| 0 | house-rules | Every job: working agreement, grilling and job card (hard rule), routing |
 | 0 | client-styles | Every client job: read the client's profile before grilling |
+| 1 | Footage Prep app (`footage-prep` MCP) | Every footage task, first: import, analyse, use its scores and selects. Not reachable: tell Tim in one line and fall back (`references/footage-prep.md`) |
 | 1 | resolve-footage-sort | Sorting raws into bins, logging audio and interviews |
-| 1 | Footage Prep app (`footage-prep` MCP) | Every shoot, before any B-roll pick: import, analyse, pick from its selects (broll-qaqc Stage 0) |
-| 1 | shotlog | Any footage task: read the shoot's log first, write back after |
+| 1 | shotlog | Any footage task: read the shoot's log first (it merges Footage Prep with Claude's analysis), write back after |
 | 2 | aroll-cut | Story beats and the interview cut (the "meat") |
-| 3–5 | broll-qaqc | Picking, placing, measuring and fixing B-roll. Its HARD GATE runs on every pass: broll_auto.py → snippet → gyroflow_headless.py → broll_gate.py PASS |
+| 3–5 | broll-qaqc | Picking, placing, measuring and fixing B-roll by Tim's B-roll rulebook (`broll-qaqc/references/broll-rulebook.md`). Its HARD GATE runs on every pass: broll_auto.py → snippet → gyroflow_headless.py → broll_gate.py PASS |
 | 6 | colour-grade | Grading with Tim's template and the scopes |
 | 7 | subtitles | Captions: style test with Tim first, then Fluid Reveal Words subs, resync after edits |
 | 7 | finish-pass | What Tim does at the end, and how to set the edit up for it |
 | 8 | learn-from-tim | After Tim finishes or asks to "learn": read his version, compare, ask why |
 
-Typical order: brief → client profile → grill → ingest/shot log → A-roll → Tim reviews → B-roll select and place → pacing gate → QC and fixes → Tim watch-down → grade → Tim's finish → learn.
+Typical order: brief → client profile → grill → job card → Footage Prep → ingest/shot log → A-roll → Tim reviews → B-roll select and place → pacing gate → QC and fixes → Tim watch-down → grade → Tim's finish → learn.
 
-## Grill before touching the edit
+## Grill first, every job, no exceptions [Tim, 9 Nov 2026]
 
-Read the client's profile first (client-styles) and skip what its [Tim] rules already answer. Ask clarifying questions before any hands-on work, through the pop-up question tool, with suggested answers (recommended first). Keep it to what the brief doesn't answer. Always cover these, because Tim decides them per concept:
+Tim: every concept is different, and jobs have started without him being asked. So the opening questions are a hard rule, not a suggestion, and every stage skill checks for the job card before it works.
 
-- Target length (it depends on the case; no default).
-- Story beats and which answers to use if the brief is loose.
-- Jokes or light moments: keep the speaker on camera, or allow B-roll?
-- Goofy or playful people shots: allowed under this concept's tone?
-- Which camera or multicam to cut from (default: Tim's multicam, A cam only unless told).
-- Music: will Tim add it (usual), and is there a break planned?
-- Anything Tim has already placed that must not move.
+1. Read the client's profile (client-styles). Skip what its [Tim] rules already answer; confirm [inferred] rules that matter for this concept.
+2. Ask Tim the open questions before any hands-on work, through the pop-up question tool, with suggested answers (recommended first). Always cover these, because Tim decides them per concept:
+   - Target length (it depends on the case; no default).
+   - Story beats and which answers to use if the brief is loose.
+   - Jokes or light moments: keep the speaker on camera, or allow B-roll?
+   - Goofy or playful people shots: allowed under this concept's tone?
+   - Which camera or multicam to cut from (default: Tim's multicam, A cam only unless told).
+   - Music: will Tim add it (usual), and is there a break planned?
+   - Subtitles: which look (see subtitles Step 0; never assume the font, size or colour).
+   - Anything Tim has already placed that must not move.
+3. Write the answers into the job card (`references/job-card.md`): the real card in `<shoot>/_shotlog/jobs/`, and the session copy the hook reads.
+4. Only then touch Resolve. The `job_guard` hook blocks any Resolve call that changes the project until the session copy exists; reads are never blocked.
+
+- Tim says "skip the questions" (or the job is a tiny fix): write a card with `Grilling: skipped (Tim said "...")`. Never skip on your own judgement.
+- New session on a job that already has a card: read it, ask "anything changed since <date>?", update it, link it.
+- Any stage skill loaded without a job card: stop and run this section first, even if the request named the stage directly ("add B-roll to C3").
 
 ## Resolve etiquette
 

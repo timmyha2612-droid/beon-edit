@@ -1,7 +1,13 @@
 {
-  "description": "beon-edit B-roll gate: Resolve scripts that place B-roll must slow it, retime it and flag it for Gyroflow.",
+  "description": "beon-edit gates: (1) no Resolve edits before the opening grilling and job card; (2) Resolve scripts that place B-roll must carry a reason per shot, retime any slowed shot and flag handheld shots for Gyroflow.",
   "hooks": {
     "PreToolUse": [
+      {
+        "matcher": "mcp__.*[Rr]esolve.*",
+        "hooks": [
+          { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/job_guard.py\"", "timeout": 10 }
+        ]
+      },
       {
         "matcher": "mcp__.*[Rr]esolve.*__run_script.*",
         "hooks": [

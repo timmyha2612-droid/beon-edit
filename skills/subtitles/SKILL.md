@@ -1,11 +1,13 @@
 ---
 name: subtitles
-description: "This skill should be used when Tim asks for subtitles or captions on a Beon Media video or short in DaVinci Resolve, or to fix, resync or restyle them after an edit: \"do the subtitles\", \"sub the shorts\", \"the sub is out of sync\", \"words pop up at once\", \"fix the sub after my trim\", \"install the title preset\". Covers the Fluid Reveal Words title, the style test with Tim, Auto/Resync Subtitles, hand clean-verbatim captions for batches, checks, and Resolve gotchas that crash or misplace titles."
+description: "This skill should be used when Tim asks for subtitles or captions on a Beon Media video or short in DaVinci Resolve, or to fix, resync or restyle them after an edit: \"do the subtitles\", \"sub the shorts\", \"the sub is out of sync\", \"words pop up at once\", \"fix the sub after my trim\", \"install the title preset\". Covers finding each client's caption look (profile, other timelines, Tim) and confirming it, the Fluid Reveal Words title, Auto/Resync Subtitles, hand clean-verbatim captions for batches, checks, and Resolve gotchas that crash or misplace titles."
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 
 # Subtitles (Fluid Reveal Words)
+
+> **Job card first.** Before any work in this skill, make sure this job has a job card (house-rules, "Grill first"). No card: stop and run the grilling with Tim. The `job_guard` hook blocks Resolve edits without one.
 
 Word-by-word subtitles that rise in as each word is spoken. Built on 28 Oct 2026 for the Beon SEO shorts (C2a approved by Bonnie, then 17 more shorts).
 
@@ -13,7 +15,7 @@ Word-by-word subtitles that rise in as each word is spoken. Built on 28 Oct 2026
 
 | Path | What it is |
 |---|---|
-| `assets/Fluid Reveal Words.setting` | The word-by-word title (12 word layers, Garet Book, hidden `Main.WordTime1..12` for per-word timing, AE-style In/Out curves). Approved C2a look as defaults. |
+| `assets/Fluid Reveal Words.setting` | The word-by-word title (12 word layers, hidden `Main.WordTime1..12` for per-word timing, AE-style In/Out curves). Its defaults are the Beon SEO shorts look (Garet Book, C2a): other clients get their own look from Step 0. |
 | `assets/Fluid Reveal.setting` | Letter-by-letter version of the same reveal. |
 | `assets/Fluid Reveal Words Hook.setting` | Hook version of Fluid Reveal Words: same reveal and timing, plus a per-word highlight (accent colour, extra weight, pop). For video hooks only; normal subtitles stay on Fluid Reveal Words. |
 | `assets/Fluid Reveal Words Kinetic.setting` | Kinetic (editorial) hook title: every word on its own layer in Libre Baskerville, key words in true italic, clean fade-rise-unblur reveal, no shadow (Tim, 3 Nov). Tim's preferred hook look. |
@@ -24,15 +26,20 @@ Word-by-word subtitles that rise in as each word is spoken. Built on 28 Oct 2026
 | `scripts/Auto Subtitles.py` | Workspace > Scripts > Edit. One click: transcribe A1, caption, build, place on a new top track. |
 | `scripts/Resync Subtitles.py` | Workspace > Scripts > Edit. After trims/retyping/re-cuts: re-times every title's words to the speech under it. Only sets values, never moves clips. |
 | `scripts/export_words.py`, `show_words.py`, `plan_captions.py`, `build_lib.py`, `check_lib.py`, `sheet.sh`, `compare_whisper.py` | The hand-caption pipeline Claude drives for batches (clean verbatim, many shorts). |
+| `scripts/read_styles.py` | Read-only scan of the title looks on the project's other timelines (`scan()`), and `save_style()` to copy a confirmed one into `WORK/style.json`. |
 | `references/captions-example.py` | Format of hand-written captions, with real examples. |
 
-## Step 0: style test with Tim (always first, unless he says the defaults are fine)
+## Step 0: find the look, confirm it with Tim (always first) [Tim, 9 Nov 2026]
 
-1. Make sure the title is installed (`scripts/install.sh`). Ask Tim to drop one **Fluid Reveal Words** on his timeline, type a sample line and set the look himself: font, size, colour, position, tracking/line spacing, rise, blur, in/out curves and lengths.
-2. Tim then either leaves that title **selected** and says so, or tells you the settings. Read the selected one with `build_lib.step_read_style(<timeline>)` (writes `WORK/style.json`) and read the values back to him in plain words (e.g. "Garet Book 0.07, white, 0.5/0.24") so he can confirm.
-3. Every caption then copies that look (`build_lib.step_config` and Auto Subtitles both apply it). Per-caption values stay automatic: text, word times, in-duration, out-duration, and the last caption has no outro.
-4. Curve *shapes* (the custom In/Out lookups) can't be copied by script. If Tim changed those, update `WORDS_IN_LUT`/`WORDS_OUT_LUT` in `build_presets.py`, regenerate, reinstall (he restarts Resolve), and commit.
-5. If he wants the look as the new default for future jobs, put the values into `build_presets.py`, regenerate the assets, reinstall, bump the plugin version and push.
+Font, size and colour change per client, so never assume them, not even the Garet defaults below. Those defaults are the Beon SEO shorts look (client profile `beon.md`), not a house style.
+
+1. **Client profile:** read the Subtitles section of `client-styles/references/<client>.md`.
+2. **Other timelines in the same project:** if the profile has no look (or says "ask"), scan what Tim already used, read-only: exec `scripts/read_styles.py` in `run_script_unsafe` and call `scan()` (or `scan(names=[...])`). It lists each distinct title look (font, size, colour, position), how often and where. Nothing is switched or edited.
+3. **Ask Tim:** nothing found, or the finds disagree: ask him with the pop-up question tool (suggest the most-used look first), or ask him to style one title himself: install the titles (`scripts/install.sh`), have him drop one **Fluid Reveal Words** on his timeline, type a sample line and set font, size, colour, position, tracking/line spacing, rise, blur, in/out curves and lengths. He leaves it **selected**, and `build_lib.step_read_style(<timeline>)` reads it into `WORK/style.json`.
+4. **Always confirm**, even when step 1 or 2 found the look: read it back in plain words (e.g. "Garet Book 0.07, white, centred at 0.5/0.24, Tilt -450 on the subtitle track") and wait for his yes. Write the confirmed look into the job card.
+5. Found on another timeline and confirmed: `read_styles.save_style(<timeline>, <title item name>, WORK)` writes `WORK/style.json`. Every caption then copies it (`build_lib.step_config` and Auto Subtitles both apply it). Per-caption values stay automatic: text, word times, in-duration, out-duration, and the last caption has no outro.
+6. Curve *shapes* (the custom In/Out lookups) can't be copied by script. If Tim changed those, update `WORDS_IN_LUT`/`WORDS_OUT_LUT` in `build_presets.py`, regenerate, reinstall (he restarts Resolve), and commit.
+7. New or changed look for this client: propose adding it to the client profile's Subtitles section (learn-from-tim), tagged [Tim] with the concept and date. Only change `build_presets.py` defaults when Tim wants it as the default for the Beon shorts.
 
 ## Tim's rules (non-negotiable)
 
@@ -43,7 +50,7 @@ Word-by-word subtitles that rise in as each word is spoken. Built on 28 Oct 2026
 - **Never several words at once:** at least 4 frames between word reveals (`MIN_GAP`). Too short a caption spreads evenly, and the last word may land up to 2 frames before the exit. Tim: "we dont ever want that happen as it looks bad and clumsy".
 - **Clean verbatim:** drop ums, stutters and false starts. Drop the other person's one-word reactions ("Yeah.", "Wow.", "Right."); the previous caption holds over them.
 - **Never crash Resolve** (see gotchas). **Easy to fix after edits:** Resync Subtitles.
-- Defaults: IN_DUR 18, OUT_DUR 4, OutBlur 6, OutLift 0.015, SyncOffset -2.
+- Timing defaults (all clients): IN_DUR 18, OUT_DUR 4, OutBlur 6, OutLift 0.015, SyncOffset -2. Font, size, colour and position come from Step 0.
 
 ## Route A: quick (one timeline, verbatim is fine)
 

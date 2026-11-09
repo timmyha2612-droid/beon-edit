@@ -2,12 +2,12 @@
 name: learn-from-tim
 description: "This skill should be used after Tim finishes or changes an edit Claude worked on, or when he asks to \"learn my edit\", \"learn my colour grading\", \"compare your version to mine\", \"analyse why I changed it\", or \"check what I did\". It reads Tim's version strictly read-only, measures the differences against Claude's version, asks Tim why, and updates the rules (project docs, memory, shot log, skills).\n"
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
 ---
 
 # Learn from Tim
 
-Read-only. Nothing in the project changes during this skill: no grade tweaks, no timeline edits, no playhead moves if avoidable. If Tim needs Resolve while this runs, stop all Resolve calls; the VM and cloud analysis can continue.
+Read-only, and the one stage that needs no job card (it changes nothing). Nothing in the project changes during this skill: no grade tweaks, no timeline edits, no playhead moves if avoidable. If Tim needs Resolve while this runs, stop all Resolve calls; the VM and cloud analysis can continue.
 
 ## 1. Snapshot Tim's version
 
@@ -31,7 +31,7 @@ B-roll:
 
 Grade:
 - `colour-grade/scripts/grade_read.py` for Temp, Tint, Global and changed nodes per clip; group shared grades (scene grading).
-- Export per-clip LUTs and render frames through them (`colour-grade/scripts/meas.py`, `batch.py`) to measure where neutrals and the main white surface landed, before (template) and after (Tim).
+- Export one LUT per grade group (never one per clip) and measure frames through them in the device VM with numpy (`colour-grade/scripts/measnp.py`, `calib.py`) to see where neutrals and the main white surface landed, before (template) and after (Tim). `meas.py` and `batch.py` are legacy: never run them inside Resolve (colour-grade, "Keep Resolve light").
 
 Music and audio:
 - Music clip In (DRT `<In>`) and `scripts/music_sections.py` for lifts and phrase dips; compare with story beats, the break and the end card.

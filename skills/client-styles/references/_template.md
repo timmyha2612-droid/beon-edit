@@ -39,6 +39,13 @@ Tags: [Tim] confirmed by Tim · [inferred] measured from his finals, not confirm
 - End card / logo / text: 
 - Brand spelling and words: 
 
+## Subtitles
+- Title: Fluid Reveal Words | Hook | Kinetic | Text+ | none (ask)
+- Font and style: ask
+- Size, colour, position (and subtitle-track Tilt): ask
+- Hook / name supers: ask
+- Where Tim's look can be read: <timeline name> (subtitles Step 0, read_styles.py)
+
 ## Grade
 - Template: 
 - Per-client habits: 

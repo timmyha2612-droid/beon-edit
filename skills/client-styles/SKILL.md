@@ -1,8 +1,8 @@
 ---
 name: client-styles
-description: "This skill should be used at the start of any Beon Media edit for a named client (Namir Mikha, Arriva, Ray White, Jack Ho, Funds Now, Prestige, or a new one), before the opening grilling, and whenever Tim says \"do it the Namir way\", \"Arriva style\", \"what's our usual for this client\", \"set up a profile for this client\" or finishes a client concept worth learning from. Holds one style profile per client: format, length, structure, A-roll, B-roll, audio, music, ending, grade, brand rules and where the footage lives.\n"
+description: "This skill should be used at the start of any Beon Media edit for a named client (Namir Mikha, Arriva, Green, Beon's own shorts, Ray White, Jack Ho, Funds Now, Prestige, or a new one), before the opening grilling, and whenever Tim says \"do it the Namir way\", \"Arriva style\", \"what's our usual for this client\", \"set up a profile for this client\" or finishes a client concept worth learning from. Holds one style profile per client: format, length, structure, A-roll, B-roll, audio, music, ending, grade, subtitle look, brand rules and where the footage lives.\n"
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 
 # Client style profiles
@@ -21,7 +21,7 @@ When the profile and a stage skill disagree, the profile wins for that client. W
 
 1. At the start of the job, read `references/<client>.md`. If there's none, copy `references/_template.md` and fill in what the brief says.
 2. In the house-rules grilling, skip questions the profile answers with a [Tim] rule. Confirm [inferred] rules that matter for this concept. Ask about anything marked "ask".
-3. Apply the profile in every stage: length and structure in aroll-cut, coverage and speeds in broll-qaqc, the template and per-client habits in colour-grade, music, end card and delivery in finish-pass.
+3. Apply the profile in every stage: length and structure in aroll-cut, coverage and speeds in broll-qaqc, the template and per-client habits in colour-grade, music, end card and delivery in finish-pass, and the caption look in subtitles (Step 0: profile, then the project's other timelines, then Tim; always confirmed with him).
 4. Mention in the report which profile rules were applied and anything that broke from them.
 
 ## Tags
@@ -44,4 +44,6 @@ When the profile and a stage skill disagree, the profile wins for that client. W
 |---|---|---|
 | Namir Mikha (real estate agent) | `references/namir-mikha.md` | C6, C1, C7 learned |
 | Arriva (apartment building, Strathfield) | `references/arriva.md` | Oct C1/C3 first cut; grades read from C2, Sep C3, C4 |
+| Green Real Estate (West Ryde) | `references/green.md` | Oct shoot 2 C3 learned |
+| Beon Media (own SEO shorts, HERO) | `references/beon.md` | Subtitle looks from the SEO shorts and C1 HERO |
 | Ray White, Jack Ho, Funds Now, Prestige | none yet | Start from `_template.md` on the first job |
