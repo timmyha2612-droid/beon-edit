@@ -2,7 +2,7 @@
 name: house-rules
 description: "This skill should be used at the start of any editing job for Tim at Beon Media (DaVinci Resolve concept videos, interviews, B-roll, colour grading, footage sorting), when Tim says \"start the edit\", \"put together concept X\", \"help me with the A-roll / B-roll / grade\", \"learn my edit\", when deciding which Beon editing skill applies, or whenever any other beon-edit stage skill is about to start and no job card exists for this job yet. It holds the working agreement, the mandatory opening grilling and job card, and the map of the other skills.\n"
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
 ---
 
 # Beon edit: house rules
@@ -19,13 +19,14 @@ How to work with Tim on any edit. Read this first, then load the skill for the s
 | 1 | resolve-footage-sort | Sorting raws into bins, logging audio and interviews |
 | 1 | shotlog | Any footage task: read the shoot's log first (it merges Footage Prep with Claude's analysis), write back after |
 | 2 | aroll-cut | Story beats and the interview cut (the "meat") |
-| 3–5 | broll-qaqc | Picking, placing, measuring and fixing B-roll by Tim's B-roll rulebook (`broll-qaqc/references/broll-rulebook.md`). Its HARD GATE runs on every pass: broll_auto.py → snippet → gyroflow_headless.py → broll_gate.py PASS |
+| 3–5 | broll | Picking, placing and fixing B-roll by Tim's B-roll rulebook (`broll/references/broll-rulebook.md`). Its HARD GATE runs on every pass: broll_auto.py → snippet → gyroflow_headless.py → broll_gate.py PASS |
+| after each stage | qa-loop + `beon-edit:qa-manager` / `beon-edit:qa-verifier` agents | Every stage is checked by a separate quality manager before Tim sees it; mistakes fixed, judgement calls double-checked, creative calls to Tim, max 3 rounds then escalate |
 | 6 | colour-grade | Grading with Tim's template and the scopes |
 | 7 | subtitles | Captions: style test with Tim first, then Fluid Reveal Words subs, resync after edits |
 | 7 | finish-pass | What Tim does at the end, and how to set the edit up for it |
 | 8 | learn-from-tim | After Tim finishes or asks to "learn": read his version, compare, ask why |
 
-Typical order: brief → client profile → grill → job card → Footage Prep → ingest/shot log → A-roll → Tim reviews → B-roll select and place → pacing gate → QC and fixes → Tim watch-down → grade → Tim's finish → learn.
+Typical order: brief → client profile → grill → job card → Footage Prep → ingest/shot log → A-roll → QA → Tim reviews → B-roll select and place → pacing gate → QA → Tim watch-down → grade → QA → subtitles → QA → final QA on the render → Tim's finish → learn.
 
 ## Grill first, every job, no exceptions [Tim, 9 Nov 2026]
 
@@ -64,7 +65,7 @@ Tim: every concept is different, and jobs have started without him being asked. 
 
 ## Long or unattended runs
 
-- When Tim leaves a job running, loop check-and-fix until the edit is smooth, keep a progress log, and schedule resume reminders (scheduled tasks) in case the session limit hits. Delete the reminders when finished.
+- When Tim leaves a job running, run the QA loop (qa-loop) on every stage until it passes or escalates after 3 rounds, keep a progress log, and schedule resume reminders (scheduled tasks) in case the session limit hits. Delete the reminders when finished.
 - Go fast: drop steps that don't add quality, split independent analysis across agents, reuse the shot log instead of re-analysing. Follow the fast path and the VM and API gotchas in `references/resolve-recipes.md` (ingest once, `cut_pieces.py`, one `run_script` per stage, measure outside Resolve).
 
 ## Learning

@@ -1,11 +1,11 @@
 ---
-name: broll-qaqc
-description: "This skill should be used when adding, reviewing or fixing B-roll on a Beon Media concept edit in DaVinci Resolve: \"add B-roll\", \"pick shots for this line\", \"check the shaky shots\", \"use shots we haven't used\", \"fix this shot\", \"pacing pass\". Covers Tim's B-roll rulebook (speed and reasons, Gyroflow, movement flow, framing and zoom, placement), selection, placement, the pacing gate, the motion card, the fix ladder (re-pick, Gyroflow, Speed Warp, replace) and sign-off.\n"
+name: broll
+description: "This skill should be used when adding or fixing B-roll on a Beon Media concept edit in DaVinci Resolve: \"add B-roll\", \"pick shots for this line\", \"use shots we haven't used\", \"fix this shot\", \"pacing pass\" (checking placed B-roll is the qa-loop skill and its qa-manager agent). Covers Tim's B-roll rulebook (speed and reasons, Gyroflow, movement flow, framing and zoom, placement), selection, placement, the hard gate, the pacing gate, handing to the qa-manager agent, and the fix ladder (re-pick, Gyroflow, slow down, replace) for its findings.\n"
 metadata:
-  version: "0.7.0"
+  version: "0.8.0"
 ---
 
-# B-roll QA/QC (Tim, Beon Media)
+# B-roll (Tim, Beon Media)
 
 > **Job card first.** Before any work in this skill, make sure this job has a job card (house-rules, "Grill first"). No card: stop and run the grilling with Tim. The `job_guard` hook blocks Resolve edits without one.
 
@@ -23,7 +23,7 @@ On Hired Home C2 this skill had been read and B-roll still went in with no Gyrof
 4. **`python3 scripts/gyroflow_headless.py --project P --timeline T`** stabilises every Orange clip (Tim's script, headless). Run it from Bash, not run_script.
 5. **`python3 scripts/broll_gate.py --project P --timeline T --plan plan.json`** must print PASS: speed 100% or slowed with a valid reason above the floor, Optical Flow on slowed shots, stabilised (no gyro track: listed for Tim), zoom within the limit, Dynamic Zoom applied on static shots, the speaker never on screen more than 4 s (`--holds-ok` for Tim's exceptions), no slivers under 1 s, no gaps. If Tim approves an exception, pass it with `--allow`.
 
-A plugin hook (`hooks/broll_guard.py`) blocks any run_script that appends camera video above V1 without the `why` records, without a retime on slowed shots, or without an Orange gyroflow flag (`# broll-nogyro: <reason>` for drone or no-gyro shots). Titles, counters, logos and nested timelines need a `# broll-ok: <reason>` comment. Then shake_check.py on a proxy render (Stage 5b) before sign-off.
+A plugin hook (`hooks/broll_guard.py`) blocks any run_script that appends camera video above V1 without the `why` records, without a retime on slowed shots, or without an Orange gyroflow flag (`# broll-nogyro: <reason>` for drone or no-gyro shots). Titles, counters, logos and nested timelines need a `# broll-ok: <reason>` comment. Then hand the stage to QA (Stage 4), which measures the render.
 
 Work in stages and stop at the gates. Never touch V1/A1 (interview), the music track, or anything Tim says he has placed. Stop all Resolve calls when Tim says he needs Resolve; analysis keeps running in the device VM.
 
@@ -84,18 +84,9 @@ Report shot count, coverage %, shot lengths (flag < 1 s or > 4 s), speaker stret
 
 Gap check before the gate [Tim, 29 Oct 2026]: walk the top visible layer frame by frame across V1, the angle track and B-roll. Nothing may show on screen for under ~1 s (24 frames) between two other shots: no 2-4 frame flash of the speaker between B-roll shots (Green C5 28:10, C6 16:10), no B-angle sliver before a B-roll shot. A B-roll shot that covers an A-roll cut must run to that cut frame or past it, never end a frame or two short (C6 32:05). Fix by trimming the neighbouring B-roll to meet exactly (head or tail), or move the shot when the clip has no handle. API: there's no trim call, so delete and re-append at the new range: append D frames at 100% (`endFrame = sf + ceil(D * fps / 24)`), then `SetSpeed` (Resolve keeps the duration and trims the source), then re-apply Pan/Tilt/Zoom, retime, name, colour and markers.
 
-## Stage 4. Detail pass: read the motion
+## Stage 4. Hand to QA (the qa-manager agent checks, this skill fixes)
 
-Stills hide motion. For every placed shot, render a motion card and read it:
-
-`python3 scripts/motion_card.py CLIP T_IN SRC_DUR OUT.png --speed <shot speed> --pan P --tilt T --zoom Z --label "R4 0331"`
-
-The card shows a 6-frame filmstrip of the 9:16 window, a first/last onion skin, flow arrows mid-shot, the camera path (pan, tilt, zoom speed per frame) and jitter per output frame at 1080 wide. The JSON line gives the move, jitter p90/max and flags (mid-ease, uneven speed, per-axis slowing, direction reversal). Save cards outside Dropbox; stage them to look.
-
-- Jitter tiers (provisional, calibrate against gyro): p90 < 1.0 px pass, 1.0–2.0 check, > 2.0 fix. Also keep the gyro tiers: pass < 0.35, check 0.35–0.6, fix > 0.6 deg/s.
-- Flag jerky moves: speed varies > 30% inside the shot, or it starts or ends mid-ease; a reversal means a reset.
-- Example: C7 R4 at 11.0 s @48% had jitter p90 0.85 px, max 1.46. Tim slid it to 11.56 s and slowed it to 30%: p90 0.38, max 0.71. (Before the 9 Nov 2026 rule; today 48% is the floor for 50p, so slide first, then re-pick.)
-- Check the first and last frame of every shot (resets, moves ending on a blank wall, awkward faces) and the tone match.
+Since step 2 (v0.17), checking is not done by the same session that placed the shots. After the hard gate prints PASS and Tim has okayed the pacing (Stage 3), run the QA loop (skill `qa-loop`) for the stage `broll`. The qa-manager agent measures every shot with fresh eyes (motion cards, rendered shake check, framing and level stills, the rulebook) and returns findings. Fix them with the ladder below, then QA checks again. The measuring recipes (motion card, shake_check tiers, rendered stills) live in `qa-loop/references/checklists/broll.md`.
 
 ## Stage 5. Fix ladder (in order)
 
@@ -109,12 +100,7 @@ The card shows a 6-frame filmstrip of the 9:16 window, a first/last onion skin, 
 3. If still shaky: slow down (reason `shake`) with Optical Flow, down to the floor: 48% for empty rooms (Speed Warp Better below 48% is only for 100 fps footage), 60% for people moving, 80% for people talking.
 4. Replace with a different clip.
 
-## Stage 5b. Measure the rendered result (stabilisation loop)
-
-Judge what the viewer sees: render the timeline at 1080x1920 H.264 to the shoot's `_claude_scratch/proxy` (save Tim's render settings as a temporary preset first, restore and delete it after, and delete your jobs), then run `scripts/shake_check.py RENDER.mp4 SHOTS.json OUT` (SHOTS = [{"shot", "start", "dur"}] in timeline frames).
-- Calibrated on synthetic shake (Green, 29 Oct 2026): floor ~0.2 px p90 at 1080 wide; +1 px random shake reads ~1.6; +2 px ~3.2; an accelerating pan stays ~0.2. Tiers: < 1.0 pass, 1.0-1.6 check, >= 1.6 fix.
-- It tracks only low-change background (moving people masked) with a Savitzky-Golay (9/2) detrend. Hands or bodies filling the frame can still inflate it: confirm every fix/check by eye (flipbooks with a fixed grid, 2x crops, slit-scans of a static column, hand-tracked background points), with an independent second look.
-- Also read the frame-difference spikes: one-frame lighting jumps (a light switching on), dropped frames, held first frames.
+## Stage 5b. Fixes that worked (for QA findings)
 
 What fixed shots on Green C5/C7 (29 Oct 2026):
 - Gyroflow can ADD shake on clips that already had in-body/lens stabilisation (C1345: camera 0.2 px, Gyroflow render 2.7 px). Compare the render with the camera file; if the original is steadier, use the original.
@@ -125,10 +111,10 @@ What fixed shots on Green C5/C7 (29 Oct 2026):
 - Resolve's TimelineItem.Stabilize() runs from scripts but uses the clip's Inspector settings (mode/smooth/strength are not scriptable); at defaults it added nothing measurable on top of Gyroflow.
 - Rebuilding a clip (no trim API): read Pan/Tilt/Zoom/Rotation, re-append, re-apply, then confirm framing with a still; Pan readback has been inconsistent between clips and timelines. ExportCurrentFrameAsStill fails on the Deliver page (OpenPage('edit') first).
 
-## Stage 6. Re-measure and sign-off
+## Stage 6. Sign-off
 
-Re-run the motion card on fixed shots, check first and last frames, run the proxy render check (finish-pass), set Green, then Tim's watch-down. Write QC results, motion verdicts, usage and lessons back to the shot log.
+QA passes the stage (or Tim settles what it escalated), then set the shots Green and hand Tim the watch-down. Write the QA results, motion verdicts, usage and lessons back to the shot log.
 
-## QC reporting
+## Clip colours (Tim's convention)
 
-Clip colours (Tim's convention): Green pass, Yellow check or stabilised pending re-measure, Orange stabilise, Violet retime, Chocolate replace. A marker on each flagged shot with score and reason. Short chat table: shot | clip | window | jitter | move flags | face/tone | action | status.
+Green pass, Yellow check or stabilised pending re-measure, Orange stabilise, Violet retime, Chocolate replace. A marker on each flagged shot with the QA finding id and reason.

@@ -2,7 +2,7 @@
 name: subtitles
 description: "This skill should be used when Tim asks for subtitles or captions on a Beon Media video or short in DaVinci Resolve, or to fix, resync or restyle them after an edit: \"do the subtitles\", \"sub the shorts\", \"the sub is out of sync\", \"words pop up at once\", \"fix the sub after my trim\", \"install the title preset\". Covers finding each client's caption look (profile, other timelines, Tim) and confirming it, the Fluid Reveal Words title, Auto/Resync Subtitles, hand clean-verbatim captions for batches, checks, and Resolve gotchas that crash or misplace titles."
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
 ---
 
 # Subtitles (Fluid Reveal Words)
@@ -75,7 +75,8 @@ Work in a folder (`WORK`, e.g. the shoot's `_claude_scratch/subs`, never Dropbox
    - If anything lands wrong: `step_reset`, then insert again.
 6. **Check:** `check_lib.stills(name, a, b, tag)` exports one still per caption just before it exits. Run `WORK=… sheet.sh tag` and look at the sheet: text complete, nothing clipped, lines balanced.
 7. **Verify words** (optional, batches): render each short's audio, then `whisper-cli -m ~/whisper-models/ggml-large-v3.bin -oj -of WORK/verify/<tag> <wav>`, then `python3 compare_whisper.py WORK`. Review each difference; most are intentional clean-ups.
-8. Write a proofreading list for Tim (caption number, text) next to the edit notes.
+8. Run the QA loop (qa-loop skill, stage `subtitles`) before Tim sees them.
+9. Write a proofreading list for Tim (caption number, text) next to the edit notes.
 
 ## Hook captions (Fluid Reveal Words Hook)
 

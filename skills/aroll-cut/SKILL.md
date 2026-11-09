@@ -2,7 +2,7 @@
 name: aroll-cut
 description: "This skill should be used when building or tightening the interview (A-roll) cut of a Beon Media concept video in DaVinci Resolve: \"put together the A-roll\", \"cut the interview\", \"build the meat first\", \"tighten the pauses\", \"take out the ums\", \"remove the stutters\", \"follow this story\", or fixing cuts that sound rough or clipped. Covers story beats, dialogue cutting, removing fillers and stutters while keeping the speech flowing, air at joins, multicam, punch-ins, jump cuts and verification.\n"
 metadata:
-  version: "0.3.1"
+  version: "0.3.2"
 ---
 
 # A-roll cut (Tim's method)
@@ -84,12 +84,12 @@ How to cut one out so the speech still flows:
 ## 3. Picture on the A-roll
 
 - Single-camera interviews alternate Zoom 1.0 and 1.35 (with pan and tilt to keep the face placed) on the visible pieces, so cuts read as angle changes. Land the conclusion in the close-up. C7 framing: medium Zoom 1.0 Pan −40; close-up Zoom 1.35 Pan −54 Tilt −150.
-- Centre the speaker in the 9:16 frame [Tim, Simone Nov C03, 2 Nov 2026]: slide the A-roll left or right with Pan so the person (head and upper body) sits in the middle, in the wides and the close-ups. Same rule as B-roll reframing in broll-qaqc.
+- Centre the speaker in the 9:16 frame [Tim, Simone Nov C03, 2 Nov 2026]: slide the A-roll left or right with Pan so the person (head and upper body) sits in the middle, in the wides and the close-ups. Same rule as B-roll reframing in broll.
 - One framing per zoom level: every wide piece gets the same Zoom, Pan and Tilt, and so does every close piece [Tim, Simone Nov C03, 2 Nov 2026]. Never centre each piece on its own: a few Pan units of difference between two pieces at the same zoom makes the cut between them jump sideways. Use one set per camera setup (Simone C03, all eight edits: wide Zoom 1.0 Pan 23.7 Tilt 0; close Zoom 1.44 Pan 24.3 Tilt −200). Only start a new set when the camera or the seat moves; if the speaker drifts a lot within a setup, flag it to Tim rather than nudging single pieces. After setting, read back every V1 item and check there are exactly two distinct (Zoom, Pan, Tilt) sets.
   - Find the centre from the median subject x across all pieces of that framing: sample each piece at 30/50/70%, take the face centre (Haar) and the upper-body mass (dark hair and clothes against the wall) and average them. The face detector misfires on turned heads (Simone C03h: one face read 0.46 against a body of 0.48), so use the body alone when the two disagree by more than ~1%.
   - Pan units are not pixels and differ per timeline: set a test Pan on one wide and one close piece, export a still each, and measure how far the subject moved. Simone (UHD 25p on 1080x1920): 1 Pan unit = 2.28 px at Zoom 1.0 and 3.1 px at Zoom 1.44. Then Pan = (540 − predicted x px) / units-per-px, with predicted x px = 540 + (x − 0.5) × 3413 × zoom.
   - Check with rendered stills (a vertical centre line on a sheet): body centred within ~2-3% of the width.
-- Speaker on screen max 4 s [Tim, 9 Nov 2026]: plan the cut so B-roll can cover the speaker every 4 s or less (broll-qaqc rulebook section 6). Long holds only happen when the B-roll is used up, or for the exceptions in the job card (a joke kept on camera, the first introduction).
+- Speaker on screen max 4 s [Tim, 9 Nov 2026]: plan the cut so B-roll can cover the speaker every 4 s or less (broll rulebook section 6). Long holds only happen when the B-roll is used up, or for the exceptions in the job card (a joke kept on camera, the first introduction).
 - Slow Dynamic Zoom on long holds [Tim, Simone Nov C03, 2 Nov 2026], the fallback for those: an Adjustment Clip on V2 over a hold of about 6.5 s or more, Dynamic Zoom linear, about 6% over 7.4 s (Tim's C03a: 1.0 to 0.936 over 177 frames). Keep that rate for any length. Zoom in or out to suit the line (in on a build or a pointed line, out on a list or a wider thought); not on every hold.
   - The adjustment clip must start and end exactly on the A-roll clip under it [Tim]: one frame over a cut zooms the next shot for a frame and then snaps back, which reads as a glitch. Take the span from the live timeline item (GetStart/GetEnd), never from planned frame maths (the cut list's lengths were off by one frame on four of eleven Simone holds). After placing, read every adjustment clip back and compare it with the V1 item it covers.
   - The API can't create adjustment clips or set the zoom rectangles. Clone Tim's clip in an exported DRT (EffectFiltersBA: 0x81 + zstd, zoom doubles at bytes 183 and 247 of the decoded data; swap them for a zoom out), import the DRT as a new timeline, and keep the old one in a Backup bin.
@@ -103,7 +103,8 @@ How to cut one out so the speech still flows:
 - Re-run `scripts/filler_scan.py` on the source ranges actually used; nothing flagged as "likely filler" should remain inside a piece, unless it's reported to Tim as left in on purpose.
 - Run `scripts/cut_review.py CUT.json OUT_DIR` and look at the sheets: last and first frame of every join, the difference image, the waveform across the cut, the jump size (shift %, diff) and the silence across the join. It suggests "invisible", "smooth cut" or "cover" per join. Fix clipped breaths, half-open mouths on edge frames and joins whose air is outside about 0.20–0.32 s before Tim sees the cut.
 - Listen-check the joins flagged by `cut_air.py`.
-- Report: running time, beats, the tightest pauses, anything borderline for Tim.
+- Then the QA loop (qa-loop skill, stage `aroll`): the qa-manager agent checks the cut with fresh eyes; fix what it confirms, ask Tim the creative calls.
+- Report: running time, beats, the tightest pauses, the QA result, anything borderline for Tim.
 
 ## Recut on a copy (Tim's timeline untouched)
 

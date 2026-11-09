@@ -2,7 +2,7 @@
 """PreToolUse guard for Resolve run_script calls (beon-edit plugin), Tim's B-roll rulebook.
 
 Blocks a script that appends camera video above V1 (B-roll) unless it
-  - carries a reason record per shot ('why', from broll-qaqc/scripts/broll_auto.py), because speed is
+  - carries a reason record per shot ('why', from broll/scripts/broll_auto.py), because speed is
     100% by default and every slow-down needs a valid reason (Tim, 9 Nov 2026),
   - sets the retime (RetimeProcess) whenever it slows a shot (SetSpeed), and
   - flags the shots for Gyroflow (Orange colour + a "gyroflow" marker preset),
@@ -39,9 +39,9 @@ if not missing:
     sys.exit(0)
 sys.stderr.write(
     "beon-edit B-roll gate: this script places B-roll on V2+ without " + "; ".join(missing) + ".\n"
-    "Tim's rulebook (broll-qaqc/references/broll-rulebook.md): 100% unless there's a valid reason to slow "
+    "Tim's rulebook (broll/references/broll-rulebook.md): 100% unless there's a valid reason to slow "
     "(shake, match the neighbours' camera speed, stretch, hero), and every shot records why. "
-    "Every B-roll pass: Footage Prep selects -> broll-qaqc/scripts/broll_auto.py SLOTS.json CLIP_DIR --snippet apply.py "
+    "Every B-roll pass: Footage Prep selects -> broll/scripts/broll_auto.py SLOTS.json CLIP_DIR --snippet apply.py "
     "-> paste its snippet (window, speed only when slowed, retime, Pan/Zoom, Orange + gyroflow marker, why) "
     "-> scripts/gyroflow_headless.py -> scripts/broll_gate.py --plan plan.json must print PASS. "
     "If this append is not B-roll (titles, counters, logo, nested timeline) or Tim approved an exception, "

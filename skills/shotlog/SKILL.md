@@ -46,8 +46,8 @@ Top level: `schema, updated, client, shoot, property, footage_prep{available, sh
 ## Tools (device VM)
 
 - Gyro: `telemetry_parser` (pip) on Sony FX3 / A7S III files; jitter RMS deg/s, tiers pass < 0.35, check 0.35–0.6, fix > 0.6.
-- Motion card per shot window: `broll-qaqc/scripts/motion_card.py` (filmstrip, camera path, jitter at output resolution). Run on every placed or candidate shot.
-- Intent map (whole-clip optical-flow move map, finds resets and the real move): only on demand, when Tim asks or a clip's move is unclear. Script: `broll-qaqc/scripts/intent_map2.py` (paths inside are shoot-specific; adapt).
+- Motion card per shot window: `broll/scripts/motion_card.py` (filmstrip, camera path, jitter at output resolution). Run on candidate windows before placing; placed shots are measured by the qa-manager agent (qa-loop).
+- Intent map (whole-clip optical-flow move map, finds resets and the real move): only on demand, when Tim asks or a clip's move is unclear. Script: `broll/scripts/intent_map2.py` (paths inside are shoot-specific; adapt).
 - Transcripts: Resolve `MediaPoolItem.TranscribeAudio()` then `GetTranscription(True)` for word timings, saved to `transcripts/` (Hugging Face is blocked in the VM, so no whisper models). Word timings drift up to 0.3 s and fillers are usually missing; `aroll-cut/scripts/cut_pieces.py` handles both.
-- People: OpenCV 4.x (`pip install "opencv-python-headless<5"`, HOG + Haar faces) on keyframes, then verify by eye. Mouth edges: `broll-qaqc/scripts/mouth_check.py` (mediapipe 0.10.14).
+- People: OpenCV 4.x (`pip install "opencv-python-headless<5"`, HOG + Haar faces) on keyframes, then verify by eye. Mouth edges: `broll/scripts/mouth_check.py` (mediapipe 0.10.14).
 - Copies of the scripts used live in `_shotlog/tools/`.

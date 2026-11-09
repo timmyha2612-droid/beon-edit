@@ -12,9 +12,9 @@ Learned the hard way on Namir C6/C1/C7 and Arriva Oct C1/C3 (Oct 2026). Read bef
 | 4. Cut the A-roll | `aroll-cut/scripts/cut_pieces.py plan.json` → sub-pieces + AppendToTimeline list | < 1 s |
 | 5. Append | ONE `run_script` call that appends every item | seconds |
 | 6. Self-review the joins | `aroll-cut/scripts/cut_review.py` → look at the sheets, fix flags | ~1 s per join |
-| 7. B-roll windows | `broll-qaqc/scripts/bestwin.py` per slot (gyro cache, no decoding), `framing_sheet.py` for 9:16 pans | instant / 2 s |
+| 7. B-roll windows | `broll/scripts/bestwin.py` per slot (gyro cache, no decoding), `framing_sheet.py` for 9:16 pans | instant / 2 s |
 | 8. Place B-roll | ONE `run_script`: append real-time lengths, then SetSpeed, retime settings, names, colours | seconds |
-| 9. Motion cards | only on placed shots; Gyroflow the flagged ones in one batch | ~10 s per shot |
+| 9. Motion cards | only on candidate windows before placing (placed shots: the qa-manager measures them); Gyroflow the flagged ones in one batch | ~10 s per shot |
 | 10. Verify | subtitles on a duplicate timeline, `filler_scan.py` on the used ranges | |
 | 11. Render check | `finish-pass/scripts/resolve_proxy_render.py` then `render_check.py` on the proxy | a minute or two |
 | Changes after B-roll | `aroll-cut/scripts/resolve_snapshot.py` → `recut_plan.py` → `resolve_relay.py` (on a copy) | seconds |
