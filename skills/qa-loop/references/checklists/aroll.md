@@ -14,7 +14,7 @@ shot log, and a proxy render (finish-pass `resolve_proxy_render.py`, only while 
 | A-06 | Air at joins | `cut_air.py` *(calibrating)* | hard | 0.20-0.32 s across a join (client profile may be tighter: Green 0.00-0.27) |
 | A-07 | Speech flows, doesn't sound rushed or stitched | listen to the proxy around every removal and join | judgement | natural phrasing, no pitch jump or missing breath |
 | A-08 | Tone at joins | F0 of each piece's tail vs the next piece | judgement | no still-talking tone into a new thought |
-| A-09 | One framing per zoom level | read back every V1 item | hard | exactly two (Zoom, Pan, Tilt) sets per camera setup |
+| A-09 | Speaker centred in every shot, one Zoom/Tilt per framing level | read back every V1 item; one still from the middle of each clip, centre of mass of the person vs the wall | hard | same Zoom and Tilt at each framing level; the person within 1% of frame centre in every clip |
 | A-10 | Speaker centred in 9:16 | rendered stills with a centre line | hard | body centre within ~2-3% of frame width |
 | A-11 | Jump cuts | `learn-from-tim/scripts/jumpcut_check.py`, cut_review suggestions | judgement | each visible jump is covered, a Smooth Cut, or small (<~1% head move) and the audio flows |
 | A-12 | Smooth Cuts don't morph | stills of each Smooth Cut, face and mouth | judgement | no warping |

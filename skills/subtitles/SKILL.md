@@ -26,7 +26,7 @@ Word-by-word subtitles that rise in as each word is spoken. Built on 28 Oct 2026
 | `scripts/Auto Subtitles.py` | Workspace > Scripts > Edit. One click: transcribe A1, caption, build, place on a new top track. |
 | `scripts/Resync Subtitles.py` | Workspace > Scripts > Edit. After trims/retyping/re-cuts: re-times every title's words to the speech under it. Only sets values, never moves clips. |
 | `scripts/export_words.py`, `show_words.py`, `plan_captions.py`, `build_lib.py`, `check_lib.py`, `sheet.sh`, `compare_whisper.py` | The hand-caption pipeline Claude drives for batches (clean verbatim, many shorts). |
-| `scripts/export_state.py`, `timeline_audio.py`, `sync_captions.py`, `retime_captions_drt.py`, `swap_timeline.py` | Speech-sync check for plain Text+ captions on a finished timeline: rebuild its audio, find each caption's first word, retime, swap the timeline (see "Speech-sync check"). |
+| `scripts/export_state.py`, `timeline_audio.py`, `sync_captions.py`, `retime_captions_drt.py`, `swap_timeline.py`, `check_caption_starts.py` | Speech-sync check for plain Text+ captions on a finished timeline: rebuild its audio, find each caption's first word, retime, swap the timeline (see "Speech-sync check"). |
 | `scripts/read_styles.py` | Read-only scan of the title looks on the project's other timelines (`scan()`), and `save_style()` to copy a confirmed one into `WORK/style.json`. |
 | `references/captions-example.py` | Format of hand-written captions, with real examples. |
 
@@ -119,7 +119,8 @@ QA checks S-02, S-03 and S-11 for a timeline whose captions are one Text+ each (
 1. exec `export_state.py` (read-only) with `WORK` and `NAMES`, call `export()`: cuts, A1 source ranges and every Text+ per timeline.
 2. `python3 timeline_audio.py WORK/<name>_state.json WORK/<name>`: A1 rebuilt as it plays and transcribed, so word times are timeline frames.
 3. `python3 sync_captions.py WORK/<name>_state.json WORK/<name>/tl.json WORK/<name>_plan.json WORK/<name>/tl.wav`: applies the cut rule above to each caption's first word, moves a word whisper placed inside a pause onto the real speech onset, and merges a caption that would show for under 14 frames into a neighbour. It only touches the lowest Text+ track (a Text+ question card stays). Check any move over ~10 frames against the audio level.
-4. Nothing to change: done. Otherwise export the timeline as DRT, `python3 retime_captions_drt.py IN.drt OUT.drt WORK/<name>_plan.json`, then exec `swap_timeline.py` with `NAME` and `DRT` (Resolve can't trim titles by script; the old timeline goes to a Backup bin, nothing is deleted).
+4. **Check every start against the audio, always last** [Simone C03b, 10 Nov 2026: "Like, it's marketing 101." went up 9 frames early over "essential", because a re-split took whisper's word time; the plan checker only checked words, gaps and line lengths, so it passed]: `python3 check_caption_starts.py WORK/<name>_state.json WORK/<name>/tl.wav --fix WORK/<name>_starts.json`. It finds captions that go up before she starts their first word (measured from the pauses, not whisper), confirms each by transcribing the stretch in question, and writes a plan that moves only the confirmed ones. A muted or beeped word reads as a pause, so a flag on a bleeped line needs a listen. Run it after any caption timing change: a re-split, a retime, or Tim's own edits.
+5. Nothing to change: done. Otherwise export the timeline as DRT, `python3 retime_captions_drt.py IN.drt OUT.drt WORK/<name>_plan.json`, then exec `swap_timeline.py` with `NAME` and `DRT` (Resolve can't trim titles by script; the old timeline goes to a Backup bin, nothing is deleted).
 
 ## After Tim edits
 
