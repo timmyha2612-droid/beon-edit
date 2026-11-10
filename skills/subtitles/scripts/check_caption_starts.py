@@ -10,9 +10,12 @@ A caption is EARLY when she is still finishing the previous line (or silent) at 
 its first word after a pause that ends within 14 frames after it; LATE when a pause ended more than 4
 frames before it and it starts mid-word. The right start is 1 frame before speech resumes, or a
 picture cut from 8 frames before that onset to 6 after (cuts win inside that window).
---fix writes a retime_captions_drt.py plan that moves only the EARLY starts (the caption before each
-one ends there), leaving text and every other caption as they are. LATE ones are only reported: a
-caption split mid-sentence with no pause can look late here, so listen before moving those.
+Every flag is confirmed by ear before it counts: the stretch between the caption's start and the
+proposed one is transcribed. EARLY is real only when that stretch doesn't already hold the caption's
+first word; LATE is real only when the stretch opens on that word (she says it before the caption appears; C03f
+"difference in" means the break has no pause, not that the caption is late).
+--fix writes a retime_captions_drt.py plan that moves only the confirmed starts (the caption before
+each one ends there), leaving text and every other caption as they are.
 """
 import json, sys, wave, array, math
 
@@ -67,25 +70,32 @@ norm = lambda t: "".join(ch for ch in t.lower() if ch.isalnum())
 # caption's start and the proposed one. If it holds the caption's own first word, the start is right.
 for i in list(moves):
     kind, st, want = moves[i]
-    if kind != "EARLY":
-        continue
-    got = heard(max(0, st - 6), want + 1)
     first = norm(caps[i][2].split()[0])
-    if first and first in [norm(w) for w in got.split()]:
-        print(f"{s['name']} [{i}] looks early but '{got}' already holds its first word: left alone")
-        del moves[i]
+    if "*" in caps[i][2]:                                  # a bleeped word is silence in A1: never trust the gap
+        print(f"{s['name']} [{i}] has a bleeped word, so its pause can't be trusted: left alone, listen to it")
+        del moves[i]; continue
+    if kind == "EARLY":
+        got = heard(max(0, st - 6), want + 1)
+        has = first and first in [norm(w) for w in got.split()]
+        if has:
+            print(f"{s['name']} [{i}] looks early but '{got}' already holds its first word: left alone")
+            del moves[i]; continue
     else:
-        moves[i] = (kind, st, want, got)
+        got = heard(max(0, want - 2), st + 1)
+        has = first and got.split() and norm(got.split()[0]) == first    # the stretch must OPEN on her first word
+        if not has:
+            print(f"{s['name']} [{i}] looks late but '{got}' doesn't hold its first word yet: left alone")
+            del moves[i]; continue
+    moves[i] = (kind, st, want, got)
 for i, m in moves.items():
     kind, st, want = m[:3]
-    extra = f"  (heard before the new start: {m[3]!r})" if len(m) > 3 else ""
+    extra = f"  (heard in between: {m[3]!r})" if len(m) > 3 else ""
     print(f"{s['name']} [{i}] {kind} by {abs(want - st)} frames: {st} -> {want}  {caps[i][2]!r}{extra}")
 print(f"{s['name']}: {len(moves)} of {len(caps)} caption starts off the speech")
 if fix:
     starts = [c[0] for c in caps]
     for i, m in moves.items():
-        if m[0] == "EARLY":
-            starts[i] = m[2]
+        starts[i] = m[2]
     ok = all(b - a >= 12 for a, b in zip(starts, starts[1:] + [caps[-1][1]]))
     plan = [{"old": [c[0], c[2]], "new": [starts[i], starts[i + 1] if i + 1 < len(caps) else c[1], c[2]]} for i, c in enumerate(caps)]
     json.dump(plan, open(fix, "w"), indent=1)
