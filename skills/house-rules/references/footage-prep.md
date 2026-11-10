@@ -24,9 +24,9 @@ they are named like `library_shoots`, `inspect_folder`, `import`, `progress`, `s
 | Footage Prep | Used for |
 |---|---|
 | `selects` (`in_frame`/`out_frame`, score) | The only ranges B-roll is picked from |
-| flags (`shaky`, `whip`, `motion_blur`, `blocked`) | Excluded from picks |
+| flags (`shaky`, `whip`, `motion_blur`, `blocked`) | Excluded from picks: call `selects` with `without_flags: ["shaky","whip","motion_blur","blocked"]` |
 | `metrics.stability`, jitter, shaky_frac (gyro / rtmd) | Ranking; >= ~0.75 preferred, < ~0.65 only when it's the only shot for the line (flag it) |
-| `auto_tier` / Tim's tier (`hero`, `reject`) | Hero first; never use `reject` |
+| `auto_tier` / Tim's tier (`hero`, `reject`) | Hero first; never use `reject` (`clips` with `auto_tier` lists them) |
 | `movement` (locked / steady / pan / tilt / pan_tilt / gimbal / handheld) | Gyroflow preset, static-shot Dynamic Zoom, move flow |
 
 ## 3. Priority and the second look

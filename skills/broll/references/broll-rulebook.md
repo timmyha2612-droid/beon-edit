@@ -101,23 +101,28 @@ he overrode, and the learning loop learns from that.
   everything is already stretched and slowed. Exceptions: jokes Tim chose to keep on camera (job card), the
   speaker's first introduction (name and role super). Anything else over 4 s goes to Tim.
 - Open each speaker turn on camera ~1.5-2 s (fits inside the 4 s).
+- Cover the visible A-roll jump cuts (aroll-cut section 3 says when a small one can stay).
 - Shots ~2-3 s, changing on sentence breaks. Open with 1-1.5 s of B-roll before the first line.
 - Nothing on screen for under ~1 s (24 frames) between two other shots: no flash of the speaker between
   B-roll shots, no B-angle sliver. A B-roll shot covering an A-roll cut runs to that cut frame or past it.
 - B-roll is video only, hard cuts, on V2, named `<slot> <clip>` (e.g. `R4 0331`).
-- Breathing gap (hero shots, music only) when the edit needs it; size it to the music.
+- Breathing gap (hero shots, music only) when the edit needs it: between two separate points or two answers, or when
+  the speech has run continuous and fast for too long. Size it to the music once music is in.
 - Outro: Tim usually runs B-roll past the last word into the end card.
 
 ## 7. Matching the words [Tim, Mill, 9 Nov 2026]
 
-- Literally relevant: "the finishes" = joinery, stone benchtop, tiles, tapware; never a toilet first.
+- Literally relevant: "the finishes" = kitchen joinery, stone benchtop, tiles, tapware. Toilets only when the line
+  is about bathrooms, and never as the first finishes shot.
 - Exact match when there is one (what's named, the person talked about); otherwise whatever fits without
   implying something false. A line about a specific room or light shows that room if it's shown at all.
-- Use the establishing shots: over the line that names the place, on level or location changes, and as the
-  closing wide into the end card.
+- Use the establishing shots: over the line that names the place ("we're standing in the display suite of The
+  Mill"), on level or location changes ("we're at Level 5"), and as the closing wide into the end card. Don't leave
+  the hero exteriors unused.
 - People: confirm identity (shot log people registry); first and last ~0.3 s not on an open mouth or grimace;
   goofy moments only if the job card allows them.
-- Light spots: a small blown highlight is fine; reject or shorten when it's a big part of the frame.
+- Light spots: a small blown highlight is fine; reject or shorten when it's a big part of the frame or the shot
+  lingers on it (C7 R14).
 
 ## 8. Where the shots come from
 

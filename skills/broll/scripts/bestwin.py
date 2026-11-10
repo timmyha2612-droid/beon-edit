@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Pick the steadiest source window for a B-roll slot from the gyro cache (no decoding, instant).
-usage: bestwin.py GYRO_DIR CLIP REC_SECONDS [--speed 48] [--lo 1.0] [--hi -1.0] [--k 3] [--avoid 6.0-8.5,...]
+usage: bestwin.py GYRO_DIR CLIP REC_SECONDS [--speed 100] [--lo 1.0] [--hi -1.0] [--k 3] [--avoid 6.0-8.5,...]
   GYRO_DIR  cache from shotlog/scripts/ingest.py (gyro/<CLIP>.json: win = [[t, shake, speed], ...])
   CLIP      file stem, e.g. C1087
-  REC_SECONDS  how long the shot plays on the timeline; at --speed 48 it uses 0.48 x that of source
+  REC_SECONDS  how long the shot plays on the timeline; at --speed 60 it uses 0.6 x that of source
   --lo/--hi    usable source range (default: skip the first and last 1 s; --hi negative = from the end)
   --avoid      source ranges already used in this series (shot log usage) - never overlapped
 Ranks windows by mean shake (deg/s, RMS of gyro minus its 0.4 s average), then max, and prints the

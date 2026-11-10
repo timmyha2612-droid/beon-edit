@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Motion card: read a B-roll shot's movement from one image.
-usage: motion_card.py CLIP T_IN SRC_DUR OUT.png [--speed 48] [--pan 0 --tilt 0 --zoom 1] [--label R4]
+usage: motion_card.py CLIP T_IN SRC_DUR OUT.png [--speed 100] [--pan 0 --tilt 0 --zoom 1] [--label R4]
 T_IN/SRC_DUR in source seconds. Crop = the 9:16 window the timeline shows (1080x1920, fill height).
 Prints a one-line JSON verdict; the PNG has a filmstrip, first/last onion skin with flow arrows,
 the camera path (pan/tilt/zoom speed) and per-frame jitter at output resolution.

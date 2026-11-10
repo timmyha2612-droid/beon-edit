@@ -2,7 +2,7 @@
 name: qa-loop
 description: "This skill should be used after every Beon Media edit stage (A-roll cut, B-roll placement, colour grade, subtitles) and before hand-over, to run Tim's quality loop: send the stage to the qa-manager agent, verify its judgement calls with the qa-verifier agent, fix what's confirmed, ask Tim the creative calls, and repeat up to 3 rounds. Also for \"QA this\", \"check the edit\", \"is it good to go\", \"run QA\", \"calibrate QA on my final\"."
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
 ---
 
 # QA loop (Tim, 9 Nov 2026)

@@ -16,6 +16,9 @@ Confirm the list and the exact timeline names with Tim first.
 
 ## How
 
+0. Write a job card with `Kind: calibration`, every line filled (n/a where it doesn't apply), `Grilling: done with Tim`
+   (he confirmed the timelines), and its session copy (house-rules job card). Without it the `job_guard` hook blocks
+   the proxy render.
 1. Only when Tim isn't using Resolve. Nothing in his project changes: the qa-manager is read-only, proxy
    renders restore his settings.
 2. For each timeline and each stage it has: run the qa-manager with `calibration: true`, round 1, a QA folder

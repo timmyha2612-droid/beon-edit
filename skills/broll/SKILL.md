@@ -2,23 +2,23 @@
 name: broll
 description: "This skill should be used when adding or fixing B-roll on a Beon Media concept edit in DaVinci Resolve: \"add B-roll\", \"pick shots for this line\", \"use shots we haven't used\", \"fix this shot\", \"pacing pass\" (checking placed B-roll is the qa-loop skill and its qa-manager agent). Covers Tim's B-roll rulebook (speed and reasons, Gyroflow, movement flow, framing and zoom, placement), selection, placement, the hard gate, the pacing gate, handing to the qa-manager agent, and the fix ladder (re-pick, Gyroflow, slow down, replace) for its findings.\n"
 metadata:
-  version: "0.8.0"
+  version: "0.9.0"
 ---
 
 # B-roll (Tim, Beon Media)
 
 > **Job card first.** Before any work in this skill, make sure this job has a job card (house-rules, "Grill first"). No card: stop and run the grilling with Tim. The `job_guard` hook blocks Resolve edits without one.
 
-## Tim's B-roll rulebook
+## The rules live in the rulebook
 
-`references/broll-rulebook.md` is the one list of how Tim handles B-roll: speed and the valid reasons to slow, Gyroflow, movement flow, framing and the zoom limit, Dynamic Zoom on static shots, placement (speaker on screen max 4 s), matching the words. Read it before every B-roll pass. This skill is the how-to; the rulebook is the what. Where they disagree, the rulebook wins.
+`references/broll-rulebook.md` is the one list of Tim's B-roll rules: speed and the valid reasons to slow, Gyroflow, movement flow, framing and the zoom limit, Dynamic Zoom on static shots, placement (speaker on screen max 4 s), matching the words. Read it before every B-roll pass. This skill is only the how-to (order, tools, recipes) and doesn't repeat the rules. Where anything here disagrees with the rulebook, the rulebook wins.
 
 ## HARD GATE: every B-roll pass, no exceptions [Tim, Hired Home Nov S2 C2, 9 Nov 2026; speed rule 9 Nov 2026]
 
 On Hired Home C2 this skill had been read and B-roll still went in with no Gyroflow and no window scoring. Tim: "make that apply to every single time". Do these five steps for every shot placed above V1, in order, and don't report the B-roll as done until step 5 prints PASS:
 
-1. **Footage Prep picks the selects** (Stage 0): `selects` without shaky/whip/motion_blur/blocked, stability >= ~0.75. Its gyro (rtmd) metrics score the whole select. Don't re-measure them by eye. Not reachable: tell Tim in one line and use the fallback (`house-rules/references/footage-prep.md`).
-2. **`scripts/broll_auto.py SLOTS.json CLIP_DIR -o plan.json --snippet apply.py`** finds the smoothest stretch of each select at the slot's length and picks the speed: **100% unless there's a valid reason** (shake, `match_v` = the neighbours' camera speed, stretch, `hero`), within the floors (people talking 80%, moving 60%, others 48%, 100 fps 25%). Give each slot `sel_frames`, `movement` and `stability` (`metrics.stability`) from Footage Prep (a locked/steady shot at >= 0.95 is never slowed for shake or rejected for uneven motion: what moves is the subject), plus `line`, `subject` and `people` ("talking"/"moving"). It also picks the Gyroflow preset, checks the zoom limit, lists static shots for Dynamic Zoom, and prints REJECT for reversals, focus pulls, exposure jumps, uneven moves and zoom that pixelates: re-pick those. Every row carries `why` (the reason record). About 3 s per slot. `--why` prints the best window at every speed. Don't read frames to judge motion; look only to check the subject, people and framing of the winner.
+1. **Footage Prep picks the selects** (Stage 0, `house-rules/references/footage-prep.md`). Its gyro (rtmd) metrics score the whole select; don't re-measure them by eye. Not reachable: tell Tim in one line and use the fallback.
+2. **`scripts/broll_auto.py SLOTS.json CLIP_DIR -o plan.json --snippet apply.py`** finds the smoothest stretch of each select at the slot's length and picks the speed by rulebook section 2 (100% unless a valid reason, within the floors). Give each slot `sel_frames`, `movement` and `stability` (`metrics.stability`) from Footage Prep (a locked/steady shot at >= 0.95 is never slowed for shake or rejected for uneven motion: what moves is the subject), plus `line`, `subject` and `people` ("talking"/"moving"). Optional: `match_v` (the neighbours' camera speed in px/frame, for the reason `match`) and `hero: true` (a shot that should breathe). It also picks the Gyroflow preset, checks the zoom limit, lists static shots for Dynamic Zoom, and prints REJECT for reversals, focus pulls, exposure jumps, uneven moves and zoom that pixelates: re-pick those. Every row carries `why` (the reason record). About 3 s per slot. `--why` prints the best window at every speed. Don't read frames to judge motion; look only to check the subject, people and framing of the winner.
 3. **Place with its snippet** (window, speed only when slowed, retime, Pan/Zoom, Orange + gyroflow marker, `why`). Confirm Pan with one still per timeline. Pan scales with zoom on 9:16 fit-space timelines: `(0.5 - x) * 1080 * Zoom`. Add the Dynamic Zoom on static shots (rulebook section 5) and set `dynamic_zoom.applied` in the plan.
 4. **`python3 scripts/gyroflow_headless.py --project P --timeline T`** stabilises every Orange clip (Tim's script, headless). Run it from Bash, not run_script.
 5. **`python3 scripts/broll_gate.py --project P --timeline T --plan plan.json`** must print PASS: speed 100% or slowed with a valid reason above the floor, Optical Flow on slowed shots, stabilised (no gyro track: listed for Tim), zoom within the limit, Dynamic Zoom applied on static shots, the speaker never on screen more than 4 s (`--holds-ok` for Tim's exceptions), no slivers under 1 s, no gaps. If Tim approves an exception, pass it with `--allow`.
@@ -29,54 +29,30 @@ Work in stages and stop at the gates. Never touch V1/A1 (interview), the music t
 
 ## Stage 0. Footage Prep first, then the shot log [Tim, Mill site update, 9 Nov 2026]
 
-Every shoot goes through Tim's Footage Prep app (the `footage-prep` MCP tools) before any B-roll is picked (`house-rules/references/footage-prep.md`: reachability, fallback, priority, second look). Never pick B-roll from contact sheets or by eye alone: on The Mill (Nov C2) shots picked that way were shaky, didn't flow and were partly irrelevant, and the app had already scored several of them "reject" or "shaky".
+Never pick B-roll from contact sheets or by eye alone: on The Mill (Nov C2) shots picked that way were shaky, didn't flow and were partly irrelevant, and the app had already scored several of them "reject" or "shaky".
 
-1. `library_shoots` (query = client or shoot). If the folder isn't there, `inspect_folder` then `import` it (client name, `watch: false`) and wait on `progress` until analysis is done. Opening a shoot switches the app, so never pass `switch_shoot` unless Tim asked.
-2. Pick only from the app's selects: `selects` with `without_flags: ["shaky","whip","motion_blur","blocked"]`, inside each select's `in_frame`/`out_frame`. Prefer `auto_tier`/Tim's tier `hero` and `metrics.stability` >= ~0.75; below ~0.65 only when it's the only shot for the line, and flag it. Skip clips the app rates `reject` (`clips` with `auto_tier`).
-3. Match every shot to its line first (what's said on screen), then flow: similar moves and speeds in a run (slow a faster shot to `match` its neighbours), the same room twice in a row only from a different angle, settle before a cut back to camera.
-4. Stabilisation renders are Tim's to start in the app; list the shots that need them.
-5. Mention in the report which app selects (clip, frames, score, stability) were used.
-6. Second look: Footage Prep's scorer chooses, but check its winner once more before placing (subject, people, 9:16 framing, smoothness of the stretch actually used). Note it in the report.
-7. Best stretch inside the select [Tim, Mill, 9 Nov 2026]: a select is 3-12 s but a slot uses ~2-3 s of it. Never start "about 1 s in": measure every window of the needed source length inside the select and take the smoothest. Use `scripts/broll_auto.py` (hard gate step 2: window + speed + Gyroflow preset in one pass). The older single-speed picker is `scripts/select_window.py '<json [[slot, clip, need_src_frames, [[in,out],...]],...]>' out.json <clip folder>` (optical-flow jitter p90, speed evenness, reversals). The append needs `ceil(D*fps/24)` real-time source frames, so limit the search to windows that fit before the clip end.
+1. Follow `house-rules/references/footage-prep.md`: is the app reachable, get the shoot in and analysed, which selects and tiers to take, the second look at its winners, the fallback, and what to report (clip, frames, score, stability, anything overridden).
+2. Best stretch inside the select [Tim, Mill, 9 Nov 2026]: a select is 3-12 s but a slot uses ~2-3 s of it. Never start "about 1 s in": `scripts/broll_auto.py` (hard gate step 2) measures every window of the needed source length inside the select and takes the smoothest. The append needs `ceil(D*fps/24)` real-time source frames, so it only searches windows that fit before the clip end.
+3. Read `<shoot>/_shotlog/shotlog.json` (shotlog skill). Reuse gyro windows, people windows, verified frames, tone tags, motion cards and transcripts; check `usage` (prefer unused windows); read `lessons`. Write back at the end.
 
-## Stage 0b. What Tim expects of every B-roll shot [Tim, Mill, 9 Nov 2026]
+## Stage 1. Select (how to apply rulebook sections 4, 5 and 7)
 
-- **Relevant to the words, literally.** "The finishes" = kitchen joinery, stone benchtop, tiles, tapware, not a toilet. Toilets only when the line is about bathrooms, and never as the first finishes shot.
-- **Use the establishing shots.** When the shoot has building or street exteriors, use them: over the line that names the place ("we're standing in the display suite of The Mill"), on level or location changes ("we're at Level 5"), and as the closing wide into the end card. Don't leave the hero exteriors unused.
-- **Flow.** The same room twice in a row only from a different angle; similar move speed through a run; cut on motion; settle before cutting back to camera; no jerky movement anywhere in the shot.
-- **Stabilise all handheld B-roll** with the Gyroflow Stabilize Flagged script (colour Orange, run it; headless driver pattern in house-rules/references/resolve-recipes.md), horizon lock on: clip-marker custom data `{"gyroflow": {"horizon": true, "horizon_amount": 100}}`. Drone shots are already gimbal-smooth; skip them.
-- **Straight verticals, level floor.** After stabilising, export a still of every shot and run `scripts/level_check.py STILL...`: it measures the lean of door frames, walls and window mullions and prints the rotation that makes them vertical plus the **minimum** zoom that still covers the 9:16 frame after that rotation. Set `RotationAngle` and `ZoomX/ZoomY` to exactly that (never zoom more than the rotation needs, and stay inside the rulebook's zoom limit so the picture never pixelates), re-export and check again. Looking-up exteriors converge (keystone): run `level_check.py --center` (verticals in the middle 40% only) or level by eye on something truly vertical (crane mast, building corner); leave strong keystone wides as shot. Measured on the Mill v2 (Resolve 21.1, 1080x1920): `RotationAngle` follows level_check's `rotate` value 1:1 (+2 set = +1.8 measured), zoom from `min_zoom(theta, cx=|Pan|*3.17)` +0.4%. Corrections were 0.3-2.2 deg with zoom 1.007-1.026. Re-export and confirm lean ~0 and no black corners.
-
-Then read `<shoot>/_shotlog/shotlog.json` (shotlog skill). Reuse gyro windows, people windows, verified frames, tone tags, motion cards and transcripts; check `usage` (prefer unused windows); read `lessons`. Write back at the end.
-
-## Stage 1. Select
-
-- Cut inside the steadiest window: skip the first and last ~1 s, no focus pulls or exposure shifts, keep moves whole (start once underway, out before it eases).
-- Fallback when no clean window or no other option: a shot outside the steadiest window can work if it's slowed to a suitable speed and gyro-stabilised. Use it only when necessary and flag it.
-- Never use a videographer reset (camera drifting back to the start of a move). Find the clip's real move (longest run in a consistent gyro direction) and reject windows moving the opposite way or between passes.
+- Match the shot to its line first, then flow through the run.
+- The clip's real move is the longest run in a consistent gyro direction; reject windows moving the opposite way or between passes (videographer resets).
+- Fallback when there's no clean window and no other shot: a stretch outside the steadiest window can work if it's slowed to a suitable speed (reason `shake`) and gyro-stabilised. Only when necessary, and flag it.
 - Re-score any hand-picked window (shake and direction) before placing.
-- Fast window pick: `scripts/bestwin.py GYRO_DIR CLIP REC_SECONDS --speed 48 --avoid <used ranges>` ranks windows from the ingest gyro cache in milliseconds (shake tier, camera speed, uneven moves) and skips ranges already used in the series. Then confirm the winner with a motion card.
-- 9:16 framing: `scripts/framing_sheet.py CLIP T OUT.jpg --pans a,b --x <subject x> --times <end of move>` draws the vertical windows and a Pan ruler on the full frame, at the start and end of a moving shot, and prints the Pan that centres a subject.
-- 9:16 reframe sideways [Tim, 29 Oct 2026]: the vertical window only sees about a third of a 16:9 frame, so when the subject (the person, sign, door or feature the line is about) isn't in the middle, slide the window sideways with Pan to put it there. Never leave the subject cut by the window edge or sitting off to one side with empty wall in the middle. Moving shot: centre the subject mid-shot, then check the first and last frame still hold it. No single subject (empty room): frame the strongest feature or the leading lines. If the subject is beyond the slide limit, accept it off-centre or re-pick. Check every B-roll shot this way before the pacing gate, and verify with a rendered still.
+- Footage Prep not reachable: `scripts/bestwin.py GYRO_DIR CLIP REC_SECONDS --avoid <used ranges>` shortlists candidate windows from the ingest gyro cache in milliseconds (shake tier, camera speed, uneven moves) and skips ranges already used in the series. `broll_auto.py` still runs on the shortlist (leave out `sel_frames`: it searches the whole clip minus 1 s at each end) and writes the `why` records the gate and the hook need.
+- 9:16 framing: `scripts/framing_sheet.py CLIP T OUT.jpg --pans a,b --x <subject x> --times <end of move>` draws the vertical windows and a Pan ruler on the full frame, at the start and end of a moving shot, and prints the Pan that centres a subject. Subject beyond the slide limit: accept it off-centre or re-pick. Check every shot before the pacing gate, with a rendered still.
 - Pan units differ per timeline. Most 1080x1920 timelines take fill-space Pan ((0.5 - x) * 3413 for UHD at Zoom 1); some report scaleToFit and render fill and take fit-space Pan ((0.5 - x) * 1080; Green Oct 2026). `framing_sheet.py --space fit` prints fit-space values. Confirm with one rendered still per timeline before setting many. The readback can also differ from what a script wrote: on Green C3/C5 every Pan later read back as 1/4 of the value set while the picture stayed identical, so never infer framing changes from Pan numbers alone; compare stills.
-- Matching: if there's an exact match for the line (what's named, the person talked about), use it. If not, use whatever fits the line without creating a misunderstanding (never a shot that implies something false). A line about a specific room or light must show that room if it's shown at all.
-- People: confirm identity (shot log people registry). The first and last ~0.3 s must not freeze on a wide-open mouth or grimace; nudge up to ±0.5 s inside the steady window (`scripts/mouth_check.py`). Goofy or playful moments only where the concept allows it; ask in the opening grilling.
-- Light spots: a small blown highlight is fine. Reject or shorten a shot when the hot spot is a significant part of the frame or the shot lingers on it (C7 R14).
+- People: nudge the window up to ±0.5 s inside the steady stretch so the first and last ~0.3 s don't land on an open mouth or grimace (`scripts/mouth_check.py`).
 
 ## Stage 2. Place
 
-- The speaker stays on screen at most 4 s at a time [Tim, 9 Nov 2026] unless the B-roll is used up and already stretched and slowed; exceptions only for jokes Tim kept on camera and the first introduction. (This replaces the old "about 50/50, switch every 4–6 s".)
-- Open each speaker turn on camera ~1.5–2 s; cover visible jump cuts (see aroll-cut for when a small one can stay).
-- Phrase-led rhythm: shots ~2–3 s, changing on sentence breaks.
-- Open with 1–1.5 s of B-roll only before the first line.
-- Breathing gap (hero property shots, music only) when the edit needs it: between two separate points or two answers, or when the speech has run continuous and fast for too long. Size it to the music once music is in.
-- Speed: 100% unless there's a valid reason to slow (rulebook section 2: shake, match, stretch, hero), within the floors (people talking 80%, moving 60%, others 48%). Record the reason.
-- Static shots: a slight Dynamic Zoom, 3–5%, in or out by the shot (rulebook section 5).
-- B-roll is video only, hard cuts, on V2. Name items `<slot> <clip>` (e.g. `R4 0331`).
-- Movement flow: no back-to-back opposite camera moves; similar speeds within a run; the last shot settles before cutting back to camera; cut on motion between moving shots.
-- Outro and ending depend on the edit; Tim usually runs B-roll past the last word into the end card.
+Place by rulebook section 6 (placement, speaker max 4 s), section 2 (speed and its reason) and section 5 (Dynamic Zoom on static shots), using the snippet from the hard gate.
 
-API: `AppendToTimeline` with source frames, length `ceil(D*fps/24)` (exclusive end), absolute `recordFrame`. Slow-mo: append real-time length then `SetSpeed({'Percentage': <speed>, 'RippleTimeline': False})`. Retime quality: `SetProperty('RetimeProcess', RETIME_OPTICAL_FLOW)`, `SetProperty('MotionEstimation', MOTION_EST_SPEED_WARP_BETTER)`.
+After stabilising (hard gate step 4), straighten verticals and level the floor: export a still of every shot and run `scripts/level_check.py STILL...`: it measures the lean of door frames, walls and window mullions and prints the rotation that makes them vertical plus the **minimum** zoom that still covers the 9:16 frame after that rotation. Set `RotationAngle` and `ZoomX/ZoomY` to exactly that, re-export and check again (lean ~0, no black corners). Looking-up exteriors converge (keystone): run `level_check.py --center` (verticals in the middle 40% only) or level by eye on something truly vertical (crane mast, building corner). Measured on the Mill v2 (Resolve 21.1, 1080x1920): `RotationAngle` follows level_check's `rotate` value 1:1 (+2 set = +1.8 measured), zoom from `min_zoom(theta, cx=|Pan|*3.17)` +0.4%. Corrections were 0.3-2.2 deg with zoom 1.007-1.026.
+
+API: `AppendToTimeline` with source frames, length `ceil(D*fps/24)` (exclusive end), absolute `recordFrame`. Slow-mo: append real-time length then `SetSpeed({'Percentage': <speed>, 'RippleTimeline': False})`. Slowed shots only: `SetProperty('RetimeProcess', RETIME_OPTICAL_FLOW)`; `SetProperty('MotionEstimation', MOTION_EST_SPEED_WARP_BETTER)` only below 48%.
 
 ## Stage 3. Pacing gate (Tim approves)
 
@@ -86,18 +62,18 @@ Gap check before the gate [Tim, 29 Oct 2026]: walk the top visible layer frame b
 
 ## Stage 4. Hand to QA (the qa-manager agent checks, this skill fixes)
 
-Since step 2 (v0.17), checking is not done by the same session that placed the shots. After the hard gate prints PASS and Tim has okayed the pacing (Stage 3), run the QA loop (skill `qa-loop`) for the stage `broll`. The qa-manager agent measures every shot with fresh eyes (motion cards, rendered shake check, framing and level stills, the rulebook) and returns findings. Fix them with the ladder below, then QA checks again. The measuring recipes (motion card, shake_check tiers, rendered stills) live in `qa-loop/references/checklists/broll.md`.
+Checking is never done by the session that placed the shots. After the hard gate prints PASS and Tim has okayed the pacing (Stage 3), run the QA loop (skill `qa-loop`) for the stage `broll`. The qa-manager agent measures every shot with fresh eyes (motion cards, rendered shake check, framing and level stills, the rulebook) and returns findings. Fix them with the ladder below, then QA checks again. The measuring recipes (motion card, shake_check tiers, rendered stills) live in `qa-loop/references/checklists/broll.md`.
 
 ## Stage 5. Fix ladder (in order)
 
 1. Slide to a steadier part of the same clip, or re-pick another window of the same subject; re-score it.
-2. Stabilise with Gyroflow: colour the clip Orange and add a clip marker whose custom data is `{"gyroflow": {"smoothness": .., "horizon": .., "horizon_amount": .., "horizon_roll": .., "zoom_mode": "Dynamic", "zoom_window": 4, "max_zoom": ..}}`. Presets: static 0.3 + horizon lock; slow gimbal push/slide/orbit 0.5 + horizon lock; tilt reveals 0.5 + roll-only lock; handheld follow / walk-and-talk 0.8, no horizon lock. Run it headless with `scripts/gyroflow_headless.py --project P --timeline T`. Tim's script (Workspace > Scripts > Utility > "Gyroflow Stabilize Flagged") stabilises at 100%, re-applies speed and retime settings, renders next to the source clip, places it on a "Gyroflow" track, disables the original and colours the new clip Yellow.
+2. Stabilise with Gyroflow: colour the clip Orange and add a clip marker whose custom data is `{"gyroflow": {"smoothness": .., "horizon": .., "horizon_amount": .., "horizon_roll": .., "zoom_mode": "Dynamic", "zoom_window": 4, "max_zoom": ..}}`. Presets by move: rulebook section 3. Run it headless with `scripts/gyroflow_headless.py --project P --timeline T`. Tim's script (Workspace > Scripts > Utility > "Gyroflow Stabilize Flagged") stabilises at 100%, re-applies speed and retime settings, renders next to the source clip, places it on a "Gyroflow" track, disables the original and colours the new clip Yellow.
    - `horizon_amount` is a percentage (100 = full lock; 1.0 means 1%, effectively off). `max_zoom` is a % limit the script only passes on above 50; use 0 for no limit.
    - Reframe first, Gyroflow second: the script copies Pan, Tilt, Zoom and crop onto the stabilised clip. It refuses camera files with no gyro data (REQUIRE_GYRO), so only flag shots whose file has motion data (Sony rtmd track) and list the rest for Tim.
    - Check verticals after stabilising: horizon lock levels the gyro horizon, not the room, so a shot can still lean 1-1.5 deg. Level it with RotationAngle and the smallest zoom that hides the corners (Tim, Green C3: zoom 1.06-1.09 for 1.0-1.4 deg) [Tim, 29 Oct 2026].
    - After stabilising, re-check framing on every shot (orig vs stab 9:16 crop at first/mid/last): the stabilisation zoom shifts and tightens the frame, so re-centre with Pan on the stabilised clip; horizon lock can add roll to an already-level upward shot (re-render with horizon off); some clips crop ~1.4x whatever the settings: Tim still prefers the stabilised version over a wider shaky one (Green C3 C9995, 29 Oct 2026), so keep it and re-centre with Pan rather than reverting.
    - When Tim asks for Gyroflow on all B-roll, flag every gyro-capable B-roll shot Orange with a preset marker, not only the shaky ones.
-3. If still shaky: slow down (reason `shake`) with Optical Flow, down to the floor: 48% for empty rooms (Speed Warp Better below 48% is only for 100 fps footage), 60% for people moving, 80% for people talking.
+3. If still shaky: slow down (reason `shake`) with Optical Flow, down to the floor for what's in the shot (rulebook section 2).
 4. Replace with a different clip.
 
 ## Stage 5b. Fixes that worked (for QA findings)

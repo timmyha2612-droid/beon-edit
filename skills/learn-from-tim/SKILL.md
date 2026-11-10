@@ -2,7 +2,7 @@
 name: learn-from-tim
 description: "This skill should be used during and after every Beon Media editing job to learn Tim's editing: when Tim (or the editor) corrects the edit or explains how something should be done mid-job (log it in the lessons inbox right away), at the end of every job (run the learner agent and put the rule proposals to Tim), after Tim finishes or changes an edit Claude worked on, or when he asks to \"learn my edit\", \"learn my colour grading\", \"compare your version to mine\", \"analyse why I changed it\", \"remember this for next time\", \"this is only for Namir\". Sorts each lesson into general / client / concept, and changes the plugin only after Tim's yes.\n"
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
 ---
 
 # Learn from Tim (Tim, 9 Nov 2026)
@@ -59,7 +59,7 @@ B-roll:
 
 Grade:
 - `colour-grade/scripts/grade_read.py` for Temp, Tint, Global and changed nodes per clip; group shared grades (scene grading).
-- Export one LUT per grade group (never one per clip) and measure frames through them in the device VM with numpy (`colour-grade/scripts/measnp.py`, `calib.py`) to see where neutrals and the main white surface landed, before (template) and after (Tim). `meas.py` and `batch.py` are legacy: never run them inside Resolve (colour-grade, "Keep Resolve light").
+- Export one LUT per grade group (never one per clip) and measure frames through them in the device VM with numpy (`colour-grade/scripts/measnp.py`, `calib.py`) to see where neutrals and the main white surface landed, before (template) and after (Tim).
 
 Music and audio:
 - Music clip In (DRT `<In>`) and `scripts/music_sections.py` for lifts and phrase dips; compare with story beats, the break and the end card.
