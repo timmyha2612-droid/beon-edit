@@ -7,7 +7,7 @@ usage: check_caption_starts.py WORK/<name>_state.json OUT_DIR/tl.wav [--fix PLAN
 (state from export_state.py, tl.wav from timeline_audio.py)
 
 A caption is EARLY when she is still finishing the previous line (or silent) at its start and starts
-its first word after a pause that ends within 14 frames after it; LATE when a pause ended more than 4
+its first word after a pause that ends within 24 frames after it; LATE when a pause ended more than 4
 frames before it and it starts mid-word. The right start is 1 frame before speech resumes, or a
 picture cut from 8 frames before that onset to 6 after (cuts win inside that window).
 Every flag is confirmed by ear before it counts: the stretch between the caption's start and the
@@ -29,8 +29,12 @@ hop = int(sr / fps)
 env = [10 * math.log10(sum(x * x for x in a[i:i + hop:2]) / (hop / 2) / 32768 ** 2 + 1e-12) for i in range(0, len(a) - hop, hop)]
 quiet = sorted(env)[len(env) // 10] + 10
 loud = lambda k: 0 <= k < len(env) and env[k] >= quiet
-# speech onsets: first loud frame after >= 3 quiet frames
-onsets = [k for k in range(3, len(env)) if loud(k) and not any(loud(j) for j in range(k - 3, k))]
+# speech onsets: first loud frame after a real pause of >= MIN_PAUSE quiet frames. A 3-frame dip is
+# usually a consonant inside a word (Simone C03c: the "p" of "component" at 460-462 read as a pause,
+# so "unless it's changed" went up 19 frames early; the real pause was 475-480). The shortest real
+# pause confirmed so far is 4 frames (C03b, before "Like").
+MIN_PAUSE = 4
+onsets = [k for k in range(MIN_PAUSE, len(env)) if loud(k) and not any(loud(j) for j in range(k - MIN_PAUSE, k))]
 
 
 def right_start(o):
@@ -41,7 +45,7 @@ def right_start(o):
 moves = {}
 for i, c in enumerate(caps[1:], 1):
     st = c[0]
-    after = [o for o in onsets if st < o <= st + 14]
+    after = [o for o in onsets if st < o <= st + 24]          # up to 1 s: C03c was 19 frames early
     before = [o for o in onsets if st - 14 <= o <= st]
     if after and not any(loud(k) for k in range(max(0, after[0] - 3), after[0])) and not (before and st - before[-1] <= 4):
         want = right_start(after[0])

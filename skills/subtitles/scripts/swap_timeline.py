@@ -3,7 +3,7 @@
 exec in run_script_unsafe with `resolve`, `project`, `NAME` (timeline), `DRT` (edited export) and
 optional `TAG` (default "pre-subsync") injected. Imports DRT into the old timeline's bin, checks the
 length, the V1/A1 clips and every non-caption item are unchanged, renames the old one "<NAME> <TAG>"
-and moves it into a "Backup" sub-bin, and gives the import NAME. Never deletes anything.
+and moves it into a "Backup" sub-bin, and gives the import NAME. If that backup name is taken it adds 2, 3...; a failed rename stops the swap. Never deletes anything.
 """
 import time
 
@@ -40,11 +40,16 @@ def shape(t):
 
 assert new.GetEndFrame() - new.GetStartFrame() == old.GetEndFrame() - old.GetStartFrame(), "length changed"
 assert shape(new) == shape(old), "a non-caption item changed"
-old.SetName(NAME + " " + TAG); new.SetName(NAME)  # noqa: F821
+backup = NAME + " " + TAG  # noqa: F821
+k = 2
+while backup in tls:                        # a backup from an earlier pass already has the name (C03f, 10 Nov)
+    backup = f"{NAME} {TAG}{k}"; k += 1  # noqa: F821
+assert old.SetName(backup), "could not rename the old timeline"
+assert new.SetName(NAME), "could not rename the import"  # noqa: F821
 time.sleep(0.5)
 bk = [f for f in home.GetSubFolderList() if f.GetName() == "Backup"]
 bk = bk[0] if bk else mp.AddSubFolder(home, "Backup")
-moved = mp.MoveClips([c for c in home.GetClipList() if c.GetName() == NAME + " " + TAG], bk)  # noqa: F821
+moved = mp.MoveClips([c for c in home.GetClipList() if c.GetName() == backup], bk)
 project.SetCurrentTimeline(new)  # noqa: F821
 pm.SaveProject()
-result = {"swapped": NAME, "backup": NAME + " " + TAG, "moved": moved}  # noqa: F821
+result = {"swapped": NAME, "backup": backup, "moved": moved}  # noqa: F821

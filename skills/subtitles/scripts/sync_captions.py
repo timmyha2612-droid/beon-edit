@@ -86,6 +86,9 @@ while changed:
         a, b = live[j - 1], live[j]
         nxt = plan[live[j + 1]][0] if j + 1 < len(live) else end
         if nxt - plan[b][0] < 14:
+            if plan[a][2].rstrip().endswith((".", "?", "!")):   # never join two sentences (Tim, C03c "Wild." | "We are salespeople.")
+                print("short caption after a sentence end, kept:", plan[b][2].replace("\n", " / "))
+                continue
             m = fits(plan[a][2].replace("\n", " ") + " " + plan[b][2].replace("\n", " "))
             if m:
                 plan[a][2] = m; plan[b] = None; live.pop(j); changed = True; break
