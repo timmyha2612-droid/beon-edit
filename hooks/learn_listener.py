@@ -36,12 +36,10 @@ editor = field("Editor") or "unknown (ask)"
 inbox = field("Lessons inbox") or "<shoot>/_shotlog/lessons/<concept>.jsonl (add a 'Lessons inbox:' line to the job card)"
 client = field("Client") or ""
 print(
-    "beon-edit learning (always on during a job): if this message corrects the edit, says how something should be done, "
-    "or explains why, record it now before acting: "
+    "beon-edit job open: if this message corrects the edit or teaches how or why something is done, log it before acting: "
     f"python3 \"{root}/skills/learn-from-tim/scripts/lessons.py\" add \"{inbox}\" --who \"{editor}\" --said \"<their words>\" "
-    "--rule \"<one-line rule>\" --kind general|client|concept|unsure"
-    + (f" (client profile: {client})" if client else "")
-    + ". General = every client, client = only this client, concept = only this video (never into the plugin), "
-    "unsure = ask at the end of the job. Plain instructions for this edit alone are not lessons; don't log those."
+    "--rule \"<one line>\" --kind general|client|concept|unsure"
+    + (f" --client \"{client}\"" if client else "")
+    + " (one-off instructions for this edit aren't lessons)."
 )
 sys.exit(0)

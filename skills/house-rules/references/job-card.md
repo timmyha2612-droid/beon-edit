@@ -18,7 +18,7 @@ with the pop-up question tool, update the card, then write the session copy. Don
 ```markdown
 # Job: <client> <concept>
 Card: <path to the real card in _shotlog/jobs/>
-Kind: concept | footage-sort | subtitles-only | grade-only | fix
+Kind: concept | footage-sort | subtitles-only | grade-only | fix | calibration
 Editor: Tim | <name of the editor running this job>
 Client: <client profile name, e.g. namir-mikha>
 Lessons inbox: <shoot>/_shotlog/lessons/<concept>.jsonl
@@ -40,8 +40,18 @@ Grilling: done with Tim | skipped (Tim said "<his words>")
 
 ## Concept-only notes
 - Rules that apply to this concept only (never copied into the plugin).
+
+## Progress
+- <YYYY-MM-DD> <stage>: <built | QA PASS round 2 | waiting on Tim: what | handed over>
 ```
 
 Fill every line. Write "n/a" when a line doesn't apply to the kind of job (a footage sort has no story
 beats), never leave it blank. The hook checks that the card has a `Grilling:` line and no empty
 `Concept and goal:` / `Target length:` lines on concept jobs.
+
+**Progress** is the job's memory between sessions. Add a line to the real card when a stage is built, when its
+QA result is in, when something waits on Tim, and before stopping for any reason. A new session reads it to
+see where the job stands instead of working it out from the timeline.
+
+`Kind: calibration` is for the QA calibration run on Tim's finished timelines (`qa-loop/references/calibration.md`):
+nothing in his edit changes, but the proxy render counts as a Resolve change for the hook, so it needs a card too.

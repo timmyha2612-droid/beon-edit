@@ -21,9 +21,9 @@ The installed plugin is a cached copy; the rules live in the git clone it was in
    profile (copy `_template.md` if the client has none, and add it to the client-styles Profiles table).
 2. Promotion to a general rule (Q17): only as an approved lesson with `promote_from`. Add the general line and
    remove exactly the `remove_lines` it lists from the client profiles (Tim saw them in the table).
-3. Bump the patch version in `.claude-plugin/plugin.json` (0.18.0 -> 0.18.1) and the touched skill's
+3. Bump the patch version in `.claude-plugin/plugin.json` (0.19.0 -> 0.19.1) and the touched skill's
    `metadata.version`.
-4. Add a changelog line to README: `<version> (<date>, learned from <concept>): <one line per rule>`.
+4. Add a changelog line at the end of CHANGELOG.md: `<version> (<date>, learned from <concept>): <one line per rule>`.
 5. Show Tim the diff (`git -C <repo> diff`) in one short message, then `git -C <repo> pull --ff-only` again,
    commit, and `git -C <repo> push origin main`. Tim's yes on the lessons is the go-ahead (Q15). Commit message:
    `Learn from <concept>: <short summary>`. Push rejected: `pull --rebase`, re-check the diff (version numbers

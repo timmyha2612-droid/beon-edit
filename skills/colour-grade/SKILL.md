@@ -2,7 +2,7 @@
 name: colour-grade
 description: "This skill should be used when colour grading a Beon Media edit in DaVinci Resolve with Tim's template, or when reading or learning his grades: \"grade C7\", \"apply the template\", \"white balance these shots\", \"fix the exposure\", \"learn my colour grading\". Covers the 9-node template, scope-led white balance and HDR exposure, grading by scene, the light (crash-safe) grading method, and reading/writing grades through DRX/DRT.\n"
 metadata:
-  version: "0.2.1"
+  version: "0.2.2"
 ---
 
 # Colour grade (Tim's workflow)
@@ -45,7 +45,7 @@ metadata:
 
 - **Never apply a DRX twice to the same clip.** On 15 Oct, a script applied six test grades in a row to one clip. The first apply worked; the second, onto the now-graded clip, froze Resolve and it closed. Single applies on fresh clips take 0.1–0.3 s.
 - To redo a graded clip: `GetNodeGraph().ResetAllGrades()` in its own call, then apply once. Or `CopyGrades` from a correctly graded clip.
-- **Never measure inside Resolve's Python.** The old method decoded 4K frames and looped over pixels in plain Python (ResolvePython has no numpy), in back-to-back 50 s batches with a LUT export per clip. That tied up Resolve and the Mac and made Resolve lag. `meas.py` and `batch.py` are kept for reference only; don't run them.
+- **Never measure inside Resolve's Python.** The old method decoded 4K frames and looped over pixels in plain Python (ResolvePython has no numpy), in back-to-back 50 s batches with a LUT export per clip. That tied up Resolve and the Mac and made Resolve lag.
 - Do all measuring in the device VM with numpy (`scripts/measnp.py`, `scripts/calib.py`): 20 hero frames × 4 LUTs take about 20 s.
 - One Resolve action per call (apply, copy, export LUT, export DRT), short calls, nothing heavy in a loop. If Tim is working in Resolve, say before you start.
 - Export LUTs only for calibration (4) and one per scene for verification, never one per clip.
