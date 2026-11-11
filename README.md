@@ -16,13 +16,35 @@ Tim's editing system for Beon Media concept videos in DaVinci Resolve, packed as
 | finish-pass | What Tim does at the end, hand-over state, music and ending guidance, delivery checks |
 | learn-from-tim | Always-on learning: every correction or piece of knowledge goes into the job's lessons inbox as general / client / concept; at the end of the job the learner agent proposes rules (and compares Tim's finished version), Tim approves, changes or drops each, then the plugin is updated and pushed; other editors' lessons wait for Tim |
 
-## New editor setup (subtitles for the Beon shorts)
+## New editor setup
 
-1. Get access to this private repo from Tim, then clone it: `git clone https://github.com/timmyha2612-droid/beon-edit ~/code/beon-edit`
+### Who "Tim" is in these skills
+
+Tim is Beon's lead editor and owns these rules. When the skills say "ask Tim" or "Tim decides", the editor running the session answers the day-to-day questions (the opening grilling, picks, caption look). Rule changes and creative sign-off still go to Tim: lessons from other editors wait in the inbox until he approves them (learn-from-tim), and so does anything marked "Tim does" (music, final grade, delivery).
+
+### Install
+
+1. Clone this repo (it's public): `git clone https://github.com/timmyha2612-droid/beon-edit ~/code/beon-edit`
 2. In Claude Code: `/plugin marketplace add ~/code/beon-edit`, then `/plugin install beon-edit@beon`. Update later with `git pull` and `/plugin marketplace update beon`.
-3. Install the Garet font (Book and Heavy; one format only, .otf or .ttf, not both).
-4. Run `bash ~/code/beon-edit/skills/subtitles/scripts/install.sh` (puts the Fluid Reveal titles and the Auto/Resync Subtitles scripts into Resolve), then restart DaVinci Resolve Studio.
-5. Make sure Claude can reach Resolve (the DaVinci Resolve connector / MCP is enabled), then ask Claude to "sub the shorts" on your timelines. It follows skills/subtitles/SKILL.md: it finds the client's caption look (client profile, other timelines in the project, or Tim), confirms it with Tim, then applies his caption rules. The Fluid Reveal Words defaults are the Beon shorts look (C2a).
+3. DaVinci Resolve **Studio** 21.1 or later, with a DaVinci Resolve connector / MCP enabled in Claude so Claude can reach it.
+4. Command-line tools: `brew install ffmpeg` (ffprobe comes with it), and the Python packages the scripts use: `python3 -m pip install numpy opencv-python-headless scipy`.
+5. [Gyroflow](https://gyroflow.xyz) in /Applications (B-roll stabilisation; the broll gate won't pass handheld shots without it).
+6. Install the Garet font (Book and Heavy; one format only, .otf or .ttf, not both).
+7. Run `bash ~/code/beon-edit/skills/subtitles/scripts/install.sh` (puts the Fluid Reveal titles and the Auto/Resync Subtitles scripts into Resolve), then restart DaVinci Resolve Studio.
+
+### Optional
+
+- **Footage Prep** (Tim's footage-scoring app) isn't shared yet. Without it the skills say so once and fall back to `shotlog/scripts/ingest.py` plus contact sheets; B-roll scores are then Claude's own and less reliable, so check picks by eye.
+- **CrisperWhisper** verbatim transcription (`aroll-cut/scripts/verbatim.py`) needs Tim's model folder and licence; without it, fillers are found with standard Whisper plus the energy checks.
+
+### Things that assume Tim's machine
+
+- Client profiles (`client-styles/references/*.md`) give footage locations on Tim's T7 Shield drive (`/Volumes/T7 Shield/Raws/<Client>/<Month>/`). If your drive or folders differ, tell Claude where the footage is at the opening grilling.
+- `finish-pass/scripts/resolve_proxy_render.py` (OUT_DIR) and `broll/scripts/intent_map2.py` take per-shoot paths that Claude fills in each time; never a Dropbox folder.
+
+### First job
+
+Ask Claude to start the edit (or e.g. "sub the shorts" on your timelines). house-rules runs the opening questions and writes a job card before Claude touches Resolve. For subtitles it follows skills/subtitles/SKILL.md: it finds the client's caption look (client profile, other timelines in the project, or Tim), confirms it, then applies the caption rules. The Fluid Reveal Words defaults are the Beon shorts look (C2a).
 
 Agents (agents/, called as `beon-edit:<name>`):
 - qa-manager: read-only quality manager; checks a stage against skills/qa-loop/references/checklists/<stage>.md and returns findings JSON (hard / judgement / creative).
@@ -101,3 +123,4 @@ Rules were learned from Namir Mikha C6, C1 and C7 and reviewed by Tim on the "Ti
 - B-roll edges land exactly on A-roll cuts. broll_gate.py checks slivers per timeline item (it used to merge back-to-back A-roll pieces of the same camera clip, which hid a 1-frame flash of the speaker) and names the B-roll edge to move. recut_plan.py keeps every edge that sat on (or within 3 frames of) a join on the new join.
 - aroll-cut: scripts/reuse_check.py lists every source range a concept shares with the project's other timelines (File Path matching); no A-roll take is reused across concepts without Tim's yes, run before cutting and before hand-over.
 0.20.1 (11 Nov 2026): recut_plan.py can remove A-roll sections ("new": []); items that sat only on them are dropped, markers move to the join (used to take the bloopers out of Hired Home Nov S2 C4).
+0.21.1 (12 Nov 2026): ready to share with the team. README setup lists every dependency (Resolve Studio + connector, ffmpeg, numpy/opencv/scipy, Gyroflow, Garet), says the repo is public, explains who "Tim" is for other editors, and marks Footage Prep / CrisperWhisper as optional. resolve_proxy_render.py no longer has an Arriva Oct output folder baked in: OUT_DIR is set per shoot and refuses Dropbox.

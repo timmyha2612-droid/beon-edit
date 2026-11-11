@@ -6,12 +6,14 @@ Three short calls, because a render outlasts the 60 s script limit:
   STEP = "poll"     report progress (call again until done)
   STEP = "restore"  delete the proxy job, load Tim's settings back from the temporary preset and
                     delete that preset
-OUT_DIR must be outside Dropbox (e.g. the shoot's _claude_scratch on the T7)."""
-OUT_DIR = "/Volumes/T7 Shield/Raws/Arriva/Oct/_claude_scratch/proxy"
+OUT_DIR must be set per shoot (e.g. <shoot folder>/_claude_scratch/proxy) and must be outside Dropbox."""
+OUT_DIR = ""  # set per shoot before running, e.g. "/Volumes/T7 Shield/Raws/<Client>/<Month>/_claude_scratch/proxy"
 NAME = "proxy_check"
 STEP = "start"
 KEEP = "zz_claude_restore_render_settings"
 
+if not OUT_DIR or "dropbox" in OUT_DIR.lower():
+    raise SystemExit("resolve_proxy_render: set OUT_DIR to the shoot's _claude_scratch/proxy folder (not Dropbox)")
 proj = resolve.GetProjectManager().GetCurrentProject()
 out = {}
 if STEP == "start":
