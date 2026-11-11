@@ -17,7 +17,8 @@ compound clips and stills are skipped):
 Whole timeline:
   speaker  the speaker never stays on screen more than 4 s at a time (V1 or a track named angle/cam/a-roll
            showing on top), except --holds-ok ranges (Tim's jokes, the first introduction)
-  slivers  nothing shows for under 1 s (24 frames at 24p) between two other shots; no gaps
+  slivers  nothing shows for under 1 s (24 frames at 24p) between two other shots, checked per timeline item
+           (never merged), so B-roll ending 1-2 frames before an A-roll cut is caught; no gaps
 Reasons are read from the plan rows (`why`, from broll_auto.py) matched by slot (first word of the clip
 name). A stabilised clip on the Gyroflow track takes the reason of the disabled original under it.
 --allow    shot names Tim approved as exceptions (e.g. a shot he wants as it is)."""
@@ -90,13 +91,13 @@ def top_layer(items, start, end):
         for it in items:
             if it["start"] <= f < it["end"] and (top is None or it["track"] > top["track"]):
                 top = it
-        key = (top["name"], top["speaker"]) if top else (None, False)
+        key = (top["name"], top["speaker"], top.get("uid")) if top else (None, False, None)
         if cur and tuple(cur[2:]) == key and cur[1] == f:
             cur[1] = f + 1
         else:
             if cur:
                 runs.append(tuple(cur))
-            cur = [f, f + 1, key[0], key[1]]
+            cur = [f, f + 1, key[0], key[1], key[2]]
     if cur:
         runs.append(tuple(cur))
     return runs
@@ -106,6 +107,7 @@ def merge_speaker(runs):
     """Join neighbouring speaker runs (V1 cut to a B-angle is still the speaker on screen)."""
     out = []
     for r in runs:
+        r = tuple(r[:4])
         if out and r[3] and out[-1][3] and out[-1][1] == r[0]:
             out[-1] = (out[-1][0], r[1], out[-1][2] + "+" + r[2], True)
         else:
@@ -113,18 +115,36 @@ def merge_speaker(runs):
     return out
 
 
+def check_slivers(runs, fps):
+    """Per timeline item, never merged [Tim, Hired Home Nov S2 C4, 11 Nov 2026]: B-roll that ends 1-2 frames
+    before an A-roll cut flashes the outgoing speaker shot for a frame, even when the next A-roll piece is the
+    same camera clip (merge_speaker hid that: P5b showed 1 frame at 477 between B4 and P6). Any visible piece
+    shorter than 1 s between two other pieces is a sliver; a B-roll edge 1-3 frames off an A-roll cut is named."""
+    probs = []
+    sliver = int(round(1 * fps))
+    for i in range(1, len(runs) - 1):
+        a, b, name = runs[i][0], runs[i][1], runs[i][2]
+        if name is None or b - a >= sliver:
+            continue
+        msg = f"{name} shows only {b - a} frames at {a}-{b} (min {sliver})"
+        prev_, next_ = runs[i - 1], runs[i + 1]
+        if runs[i][3] and not prev_[3]:
+            msg += f": B-roll '{prev_[2]}' ends {b - a} f before the A-roll cut at {b}; end it on the cut"
+        elif runs[i][3] and not next_[3]:
+            msg += f": B-roll '{next_[2]}' starts {b - a} f after the A-roll cut at {a}; start it on the cut"
+        probs.append(msg)
+    return probs
+
+
 def check_timeline(runs, fps, holds_ok):
     probs = []
     limit = int(round(4 * fps))
-    sliver = int(round(1 * fps))
     for i, (a, b, name, spk) in enumerate(runs):
         if name is None:
             probs.append(f"gap/black {a}-{b} ({b - a} frames)")
             continue
         if spk and b - a > limit and not any(h0 <= a and b <= h1 for h0, h1 in holds_ok):
             probs.append(f"speaker on screen {(b - a) / fps:.1f} s at {a}-{b} (max 4 s; cover it, or Tim allows it)")
-        if 0 < i < len(runs) - 1 and b - a < sliver:
-            probs.append(f"{name} shows only {b - a} frames at {a}-{b} (min {sliver})")
     return probs
 
 
@@ -179,7 +199,8 @@ def main():
             if not it.GetClipEnabled():
                 disabled_by_start[it.GetStart()] = name
                 continue
-            layer.append(dict(track=k, start=it.GetStart() - t0, end=it.GetEnd() - t0, speaker=speaker, name=name))
+            layer.append(dict(track=k, start=it.GetStart() - t0, end=it.GetEnd() - t0, speaker=speaker, name=name,
+                              uid=f"{k}:{it.GetStart()}"))
             if speaker:
                 continue
             shots.append((it, k, tname, name, path))
@@ -200,7 +221,8 @@ def main():
         fails += bool(probs); pending += bool(pend)
         rows.append((name, shot["speed"], "; ".join(probs + pend + notes) or "ok"))
     end = max([it["end"] for it in layer] or [0])
-    tl_probs = check_timeline(merge_speaker(top_layer(layer, 0, end)), fps, holds)
+    runs = top_layer(layer, 0, end)
+    tl_probs = check_timeline(merge_speaker(runs), fps, holds) + check_slivers(runs, fps)
     for r in rows:
         print(f"{r[0]:<24} {r[1]:5.0f}%  {r[2]}")
     for p in tl_probs:

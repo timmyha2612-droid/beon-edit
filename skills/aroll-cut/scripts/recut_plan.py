@@ -11,6 +11,8 @@ Every other item (B-roll, Gyroflow, angle tracks, markers) keeps its length and 
 words it sat on: its start is mapped through the A-roll by source time; one that started exactly at
 an A-roll join starts at the new join; one that sat in a gap keeps its distance to the piece before.
 If a moved item now runs into the next item on its track it is shortened to meet it (reported).
+An edge that sat on an A-roll join (or within 3 frames of one) lands exactly on the new join, so B-roll
+never ends a frame or two before a cut after a recut (Tim, 11 Nov 2026: 1-frame speaker flash = glitch).
 Writes plan.json for resolve_relay.py and prints a before/after table to check."""
 import json, math, sys
 
@@ -79,6 +81,16 @@ def M(r):
     return r
 
 
+SNAP = 3
+OLD_JOINS = sorted({a["s"] for a in A} | {A[-1]["e"]})
+
+
+def snap_join(r):
+    """The old A-roll join an edge sat on (within SNAP frames), or None."""
+    j = min(OLD_JOINS, key=lambda j: abs(j - r))
+    return j if abs(j - r) <= SNAP else None
+
+
 plan = {"source": snap["name"], "copy": edits["copy"], "aroll_track": int(AR[5:]), "items": [], "markers": {}, "notes": []}
 for p in pieces:
     o = A[p["from"]]
@@ -92,7 +104,20 @@ for key, tr in snap["tracks"].items():
     for it in sorted(tr["items"], key=lambda r: r["s"]):
         sp = it.get("speed") or {}
         pct = float(sp.get("Percentage", sp.get("percentage", 100.0)) or 100.0) if isinstance(sp, dict) else 100.0
-        rows.append({"track": key, "mpid": it["mpid"], "clip": it["clip"], "rec": M(it["s"]) - T0, "dur": it["e"] - it["s"],
+        # Edges on A-roll cuts stay on the cuts [Tim, Hired Home Nov S2 C4, 11 Nov 2026]: an edge that sat on an
+        # old join (or within SNAP frames of one) lands exactly on the new join, so a recut never leaves a 1-2 frame
+        # flash of the speaker between B-roll and the next A-roll piece (B4 ended 1 f before P6: glitch).
+        ns, ne = M(it["s"]), M(it["s"]) + (it["e"] - it["s"])
+        js, je = snap_join(it["s"]), snap_join(it["e"])
+        if js is not None:
+            ns = M(js)
+        if je is not None:
+            ne = M(je)
+            if ne - ns != it["e"] - it["s"]:
+                plan["notes"].append(f"{key} '{it['name']}' end kept on the A-roll cut: {it['e'] - it['s']} -> {ne - ns} frames")
+        else:
+            ne = ns + (it["e"] - it["s"])
+        rows.append({"track": key, "mpid": it["mpid"], "clip": it["clip"], "rec": ns - T0, "dur": ne - ns,
                      "old_rec": it["s"] - T0, "ss": it["ss"], "src_fps": fps_of(it), "speed": pct, "p": it.get("p", {}),
                      "name": it["name"], "col": it["col"], "en": it["en"], "with_audio": False})
     for a_, b_ in zip(rows, rows[1:]):

@@ -2,7 +2,7 @@
 name: broll
 description: "This skill should be used when adding or fixing B-roll on a Beon Media concept edit in DaVinci Resolve: \"add B-roll\", \"pick shots for this line\", \"use shots we haven't used\", \"fix this shot\", \"pacing pass\" (checking placed B-roll is the qa-loop skill and its qa-manager agent). Covers Tim's B-roll rulebook (speed and reasons, Gyroflow, movement flow, framing and zoom, placement), selection, placement, the hard gate, the pacing gate, handing to the qa-manager agent, and the fix ladder (re-pick, Gyroflow, slow down, replace) for its findings.\n"
 metadata:
-  version: "0.9.0"
+  version: "0.9.1"
 ---
 
 # B-roll (Tim, Beon Media)
@@ -85,7 +85,7 @@ API: `AppendToTimeline` with source frames, length `ceil(D*fps/24)` (exclusive e
 
 Report shot count, coverage %, shot lengths (flag < 1 s or > 4 s), speaker stretches over 4 s, speeds with their reasons, uncovered jump cuts, on-camera openings per turn. Wait for Tim's go.
 
-Gap check before the gate [Tim, 29 Oct 2026]: walk the top visible layer frame by frame across V1, the angle track and B-roll. Nothing may show on screen for under ~1 s (24 frames) between two other shots: no 2-4 frame flash of the speaker between B-roll shots (Green C5 28:10, C6 16:10), no B-angle sliver before a B-roll shot. A B-roll shot that covers an A-roll cut must run to that cut frame or past it, never end a frame or two short (C6 32:05). Fix by trimming the neighbouring B-roll to meet exactly (head or tail), or move the shot when the clip has no handle. API: there's no trim call, so delete and re-append at the new range: append D frames at 100% (`endFrame = sf + ceil(D * fps / 24)`), then `SetSpeed` (Resolve keeps the duration and trims the source), then re-apply Pan/Tilt/Zoom, retime, name, colour and markers.
+Gap check before the gate [Tim, 29 Oct 2026; per item since Hired Home Nov S2 C4, 11 Nov 2026]: `broll_gate.py` now checks this per timeline item, never merging back-to-back pieces of the same camera clip (that merge hid a 1-frame flash of the speaker's close-up between two pieces). Every B-roll edge that meets an A-roll cut sits exactly on the cut frame. After any recut, re-place or 1-frame fix, run the gate again before reporting. walk the top visible layer frame by frame across V1, the angle track and B-roll. Nothing may show on screen for under ~1 s (24 frames) between two other shots: no 2-4 frame flash of the speaker between B-roll shots (Green C5 28:10, C6 16:10), no B-angle sliver before a B-roll shot. A B-roll shot that covers an A-roll cut must run to that cut frame or past it, never end a frame or two short (C6 32:05). Fix by trimming the neighbouring B-roll to meet exactly (head or tail), or move the shot when the clip has no handle. API: there's no trim call, so delete and re-append at the new range: append D frames at 100% (`endFrame = sf + ceil(D * fps / 24)`), then `SetSpeed` (Resolve keeps the duration and trims the source), then re-apply Pan/Tilt/Zoom, retime, name, colour and markers.
 
 ## Stage 4. Hand to QA (the qa-manager agent checks, this skill fixes)
 

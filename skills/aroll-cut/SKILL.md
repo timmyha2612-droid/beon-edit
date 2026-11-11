@@ -2,7 +2,7 @@
 name: aroll-cut
 description: "This skill should be used when building or tightening the interview (A-roll) cut of a Beon Media concept video in DaVinci Resolve: \"put together the A-roll\", \"cut the interview\", \"build the meat first\", \"tighten the pauses\", \"take out the ums\", \"remove the stutters\", \"follow this story\", or fixing cuts that sound rough or clipped. Covers story beats, dialogue cutting, removing fillers and stutters while keeping the speech flowing, air at joins, multicam, punch-ins, jump cuts and verification.\n"
 metadata:
-  version: "0.4.0"
+  version: "0.4.1"
 ---
 
 # A-roll cut (Tim's method)
@@ -19,6 +19,7 @@ Build the spoken spine first. Tim reviews it before any B-roll goes on.
 - Cut from Tim's multicam when it exists; A cam only unless told. Single-cam interviews use punch-ins (below).
 - Read the shot log `interviews` entry for transcripts, best lines and `avoid` lists. Transcribe if missing.
 - Find interview clips and angles by their `sort_role` in the shot log: `aroll` for the main take, `multicam_angle` for other angles.
+- **No reuse across concepts** [Tim, Hired Home Nov S2 C4, 11 Nov 2026: "some a roll is overlapping or already used in concept 2"]: concepts from one shoot share clips. Before cutting, run `scripts/reuse_check.py` (run_script, read-only; `PLANNED` takes the ranges you're about to cut) against the project's other timelines, and again before hand-over. Never reuse an A-roll take another concept already uses without Tim's yes; ask which versions count (a superseded, never-delivered version may not), and offer the other take of the same answer. Report B-roll clips used elsewhere (same window = reuse).
 - Every take or line cut in or dropped gets a `usage[].reason` in the shot log (e.g. "dropped: repeats line 4, cleaner take at 3:12").
 - Show Tim the beat list and lines (pop-up questions with suggested choices) before cutting when the brief leaves choices open.
 
@@ -115,7 +116,8 @@ To change A-roll pieces after B-roll is placed (filler removal, a re-pick, a tig
 2. edits.json: which A-roll items are replaced by which new source ranges (from `cut_pieces.py`).
 3. `scripts/recut_plan.py snapshot.json edits.json plan.json`: lays out the new A-roll and moves every other item and marker with the words it sat on (B-roll that started at a join starts at the new join); prints the before/after table and any item it had to shorten.
 4. `scripts/resolve_relay.py` (run_script): STEP "create" duplicates the timeline under a new name and empties it, STEP "place" re-appends each track with speeds, framing, names, colours and enabled states.
-5. Proxy render and `finish-pass/scripts/render_check.py`, then Tim listens.
+5. Run `broll/scripts/broll_gate.py` on the copy: B-roll edges must still sit exactly on the A-roll cuts (recut_plan.py snaps edges that sat on or within 3 frames of a join; any 1-2 frame flash of the speaker is a glitch [Tim, 11 Nov 2026]). Fix any re-placed item that drifted off a cut the same way.
+6. Proxy render and `finish-pass/scripts/render_check.py`, then Tim listens.
 
 ## Resolve API recipes
 

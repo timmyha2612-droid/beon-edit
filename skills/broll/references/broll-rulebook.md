@@ -104,6 +104,10 @@ he overrode, and the learning loop learns from that.
 - Shots ~2-3 s, changing on sentence breaks. Open with 1-1.5 s of B-roll before the first line.
 - Nothing on screen for under ~1 s (24 frames) between two other shots: no flash of the speaker between
   B-roll shots, no B-angle sliver. A B-roll shot covering an A-roll cut runs to that cut frame or past it.
+- **B-roll edges land exactly on A-roll cuts, never 1-3 frames off** [Tim, Hired Home Nov S2 C4, 11 Nov 2026: "it will
+  glitching"]. A B-roll shot that ends one frame before the cut flashes the outgoing speaker shot for a frame, even when the
+  next A-roll piece is the same camera clip. Holds after every recut, re-place or trim: recut_plan.py keeps edges on the
+  joins, and broll_gate.py checks slivers per timeline item (never merged) and names the B-roll edge to move.
 - B-roll is video only, hard cuts, on V2, named `<slot> <clip>` (e.g. `R4 0331`).
 - Breathing gap (hero shots, music only) when the edit needs it; size it to the music.
 - Outro: Tim usually runs B-roll past the last word into the end card.
