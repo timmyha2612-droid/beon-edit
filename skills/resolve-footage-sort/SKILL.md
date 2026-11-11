@@ -2,7 +2,7 @@
 name: "resolve-footage-sort"
 description: "This skill should be used when sorting a DaVinci Resolve bin of raw footage into numbered content bins and logging what each clip shows: \"sort this shoot\", \"sort the footage\", \"organise the raws\", \"put the clips into bins\", \"log this shoot\", or step 1 of any edit job. Footage Prep first, then a cheap pixel fingerprint, one look per setup, a gate table for Tim, and renamed copies in numbered bins with the originals kept in an archive bin."
 metadata:
-  version: "0.3.0"
+  version: "0.3.1"
 ---
 
 # Resolve footage sort
@@ -92,7 +92,7 @@ Options: Approve / I'll change some / Only write the shot log (`sort_apply.py pl
 - Other flags: `--shotlog-only` (gate answer "Only write the shot log"), `--test-bin _claude_sort_test` with `--limit N` and `--cleanup-test` (tests only).
 
 ### Step 9. Shot log and report
-sort_apply re-reads `shotlog.json` right before writing and merges. It never touches `footage_prep` keys. Content fields can go in before approval with `--shotlog-only` (`sort.approved: false`). `bin` and `sort_copy` are written only after a verified copy. Save the plan to `_shotlog/plans/sort-<YYYY-MM-DD>.json` (text only). Regenerate `shotlog.csv`.
+sort_apply re-reads `shotlog.json` right before writing and merges. It never touches `footage_prep` keys. Content fields can go in before approval with `--shotlog-only` (`sort.approved: false`). `bin` and `sort_copy` are written only after a verified copy. Save the plan to `_shotlog/plans/sort-<YYYY-MM-DD>.json` (text only). sort_apply writes `shotlog.json` in Footage Prep's own format and regenerates `shotlog.csv` with the same bytes the app writes.
 
 Report: bin, count, what is in it. Then unsure clips, rejects, thin bins, not_for warnings, mismatches, excluded items, the scratch path (Tim clears it), time taken and images read. Plain short sentences.
 
@@ -137,7 +137,7 @@ Families per shoot kind (property, suburb, event, office, signboards, interview,
 - The originals never move and never get renamed. Rejects live only in the archive.
 - Each non-reject, non-unsure clip gets a second pool clip: the same file imported into its numbered bin. Resolve makes it a separate clip with a new MediaId. The original is untouched.
 - The copy's Clip Name is descriptive and always ends in the camera clip number: `Bakery front wide C0123`.
-- Footage Prep markers (color, name, note, duration, customData) and keywords are copied over. Sort keywords are appended, never replaced: `place:<id>`, `subject:<id>`, `concept:<id>` (when set) and the primary role, bare (`establishing`).
+- Footage Prep markers (color, name, note, duration, customData) and keywords are copied over. Sort keywords are appended, never replaced: `place:<id>`, `subject:<id>`, `concept:<id>` (when set) and the primary role as `role:<role>` (`role:establishing`), so a role never reads like a bare copy of `place:<id>`.
 - Every copy gets `beon.sort_copy = 1` and `beon.sort_src = <original UniqueId>` as third-party metadata.
 - Reruns skip copies already in the target bin (same File Path plus `beon.sort_copy`), so a half-finished run resumes.
 

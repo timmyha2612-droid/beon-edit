@@ -18,7 +18,7 @@ What is here:
 - now_iso() and parse_time(text) for ISO times.
 
 Stdlib only (plus ffprobe on PATH)."""
-import json, os, subprocess, sys, tempfile
+import csv, io, json, math, os, subprocess, sys, tempfile
 from datetime import datetime, timezone
 
 SORT_V = "0.3"                 # sort block version in the shot log
@@ -176,3 +176,67 @@ def parse_time(s):
         return datetime.fromisoformat(s.replace("Z", "+00:00"))
     except ValueError:
         return None
+
+
+# ---- shotlog.csv (same bytes as Footage Prep's fp-shotlog csv.rs: 8 skill columns, then fp_*) ----
+CSV_HEADER = ["clip", "camera", "fps", "duration_s", "content", "people", "notes", "usage",
+              "fp_tier", "fp_score", "fp_move", "fp_stab", "fp_selects"]
+
+
+def _cell(v):
+    if v is None:
+        return ""
+    if v is True:
+        return "True"
+    if v is False:
+        return "False"
+    if isinstance(v, float) and not math.isfinite(v):
+        return "NaN" if v != v else ("Infinity" if v > 0 else "-Infinity")
+    if isinstance(v, (int, float)):
+        return repr(v)
+    if isinstance(v, list):
+        return ", ".join(_cell(x) for x in v)
+    if isinstance(v, dict):
+        return json.dumps(v, indent=1)
+    return str(v)
+
+
+def _sel_time(x):
+    return str(int(x)) if float(x).is_integer() and abs(x) < 1e16 else repr(float(x))
+
+
+def _truthy(v):
+    return v is not None and v != ""
+
+
+def csv_text(log):
+    """shotlog.json -> shotlog.csv text: Python csv excel dialect, CRLF, minimal quoting."""
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\r\n")
+    w.writerow(CSV_HEADER)
+    for e in log.get("clips") or []:
+        usage = "; ".join(f"{_cell(u.get('timeline'))} {_cell(u.get('slot'))} {_cell(u.get('src_in'))}-{_cell(u.get('src_out'))}"
+                          for u in (e.get("usage") or []) if isinstance(u, dict))
+        fp = e.get("footage_prep") or {}
+        stab = fp.get("stab") or {}
+        stab_text = next((_cell(stab[k]) for k in ("status", "mode") if isinstance(stab, dict) and _truthy(stab.get(k))), "")
+        sels = "; ".join(f"{_sel_time(s['in']) if isinstance(s.get('in'), (int, float)) else ''}-"
+                         f"{_sel_time(s['out']) if isinstance(s.get('out'), (int, float)) else ''} "
+                         f"{next((_cell(s[k]) for k in ('tier', 'kind') if _truthy(s.get(k))), '')}"
+                         for s in (fp.get("segments") or []))
+        w.writerow([_cell(e.get(k)) for k in ("clip", "camera", "fps", "duration_s", "content", "people", "notes")]
+                   + [usage, _cell(fp.get("tier")), _cell(fp.get("score")), _cell(fp.get("move")), stab_text, sels])
+    return buf.getvalue()
+
+
+def write_csv_next_to(shotlog_path):
+    """Regenerate shotlog.csv beside shotlog.json, atomically. Returns the csv path."""
+    p = os.path.abspath(os.path.expanduser(shotlog_path))
+    with open(p) as fh:
+        log = json.load(fh)
+    out = os.path.join(os.path.dirname(p), "shotlog.csv")
+    fd, tmp = tempfile.mkstemp(prefix=".shotlog.", suffix=".csv.tmp", dir=os.path.dirname(p))
+    with os.fdopen(fd, "w", newline="") as fh:
+        fh.write(csv_text(log))
+    os.replace(tmp, out)
+    return out

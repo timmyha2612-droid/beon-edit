@@ -23,7 +23,7 @@ What --apply does, in order:
      stays in the archive), tags it beon.sort_copy=1 and beon.sort_src=<original UniqueId>, sets the
      Clip Name (read back, the setter returns False even when it works), copies every marker and the
      Keywords from the original, and appends the sort keywords (place:, subject:, concept: ids and
-     the primary role).
+     role:<primary role>).
   3. Checks once: every planned copy exists once in its bin with its name, markers and sort_src, and
      the originals still have the same markers and keywords. No retry here: rerun to retry, it resumes.
   4. With --shotlog: re-reads the shot log and merges plan.shotlog_updates. Verified copies get
@@ -137,7 +137,7 @@ def read_shotlog(path):
 
 
 def sort_keywords(plan, key):
-    """Sort keywords from the shot log update: place/subject/concept ids and the primary role."""
+    """Sort keywords from the shot log update: place/subject/concept ids and role:<primary role>."""
     up = plan.get("shotlog_updates", {}).get(key, {})
     out = []
     for f in ("place", "subject", "concept"):
@@ -147,7 +147,7 @@ def sort_keywords(plan, key):
             out.append(f"{f}:{v}")
     roles = up.get("roles") or []
     if roles:
-        out.append(roles[0])
+        out.append(f"role:{roles[0]}")  # prefixed, so role "place" never reads as a bare duplicate of place:<id>
     return out
 
 
@@ -218,8 +218,9 @@ def write_shotlog(path, plan, verified, approve_archive):
     p = os.path.abspath(os.path.expanduser(path))
     fd, tmp = tempfile.mkstemp(prefix=".shotlog.", suffix=".tmp", dir=os.path.dirname(p))
     with os.fdopen(fd, "w") as fh:
-        json.dump(log, fh, indent=1, ensure_ascii=False)
+        fh.write(json.dumps(log, indent=1))  # Footage Prep's own format: indent 1, ASCII, no trailing newline
     os.replace(tmp, p)
+    sl.write_csv_next_to(p)
     return n
 
 
