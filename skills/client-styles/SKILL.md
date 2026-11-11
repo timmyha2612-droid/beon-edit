@@ -47,5 +47,6 @@ When the profile and a stage skill disagree, the profile wins for that client. W
 | Namir Mikha (real estate agent) | `references/namir-mikha.md` | C6, C1, C7 learned |
 | Arriva (apartment building, Strathfield) | `references/arriva.md` | Oct C1/C3 first cut; grades read from C2, Sep C3, C4 |
 | Green Real Estate (West Ryde) | `references/green.md` | Oct shoot 2 C3 learned |
+| Simone Azzi (real estate agent) | `references/simone-azzi.md` | Nov C03a–d v2 learned (context-first, motivated framing, Text+ captions) |
 | Beon Media (own SEO shorts, HERO) | `references/beon.md` | Subtitle looks from the SEO shorts and C1 HERO |
 | Ray White, Jack Ho, Funds Now, Prestige | none yet | Start from `_template.md` on the first job |

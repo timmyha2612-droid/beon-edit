@@ -2,7 +2,7 @@
 name: aroll-cut
 description: "This skill should be used when building or tightening the interview (A-roll) cut of a Beon Media concept video in DaVinci Resolve: \"put together the A-roll\", \"cut the interview\", \"build the meat first\", \"tighten the pauses\", \"take out the ums\", \"remove the stutters\", \"follow this story\", or fixing cuts that sound rough or clipped. Covers story beats, dialogue cutting, removing fillers and stutters while keeping the speech flowing, air at joins, multicam, punch-ins, jump cuts and verification.\n"
 metadata:
-  version: "0.4.1"
+  version: "0.4.2"
 ---
 
 # A-roll cut (Tim's method)
@@ -16,6 +16,7 @@ Build the spoken spine first. Tim reviews it before any B-roll goes on.
 - Run the house-rules grilling first (length, jokes, camera, music).
 - Turn the brief into story beats (e.g. C7: "the first step was…" → approach and outcome → materials, finishes, design decisions → conclusion).
 - Use the strongest answers. When the speaker repeats himself, use the final version (usually the cleanest).
+- **Context before hooks** [Simone Nov C03, 11 Nov 2026: the client couldn't follow v1s built from cold mid-answer hooks and lines spliced from different minutes]. Each short must make sense to a stranger with the sound on: start on the answer's setup line, play it in source order, and reorder only whole thoughts when that is clearer. Check every "it", "that", "because", "so" and callback ("25 years ago", "marketing 101") points at something the viewer has heard. Don't open on a teaser that repeats the ending. Before building, run a cold-listener check: transcribe the simulated cut and have a reviewer with no context flag anything that doesn't follow.
 - Cut from Tim's multicam when it exists; A cam only unless told. Single-cam interviews use punch-ins (below).
 - Read the shot log `interviews` entry for transcripts, best lines and `avoid` lists. Transcribe if missing.
 - Find interview clips and angles by their `sort_role` in the shot log: `aroll` for the main take, `multicam_angle` for other angles.
@@ -55,6 +56,10 @@ What to remove:
 - Stutters and repeats: "the the", "I I", "we take, we take pride".
 - False starts and restarts: keep the final complete version of the phrase.
 - Self-corrections, "sorry", and crew voices inside the answer.
+- "You know" at the start of a sentence, after a pause (Tim cut these on Simone C03a/C03b, 11 Nov 2026). Keep mid-phrase ones with no gap ("presenting, you know, a suggested"): cutting them would clip the line. If removing one leaves no air at a sentence break, keep it.
+- A "possible um" you flagged but weren't sure of: Tim cut it (Simone C03a, before "more nightmares"). Listen, and cut it when it is a separate blob in a pause.
+
+Joins after removals [Tim, Simone C03, 11 Nov 2026]: put a 4-frame Cross Fade 0 dB on A1 at any tight join (little or no air), and leave about 0.4 s of tail after the last word before the end card. On a single-camera short, don't trim pauses under ~0.9 s or tiny hesitations just to tidy: each trim is a jump cut (Tim: "too jumpy"). Change shot size only where motivated: at real audio cuts, plus at most one change inside a stretch over ~20 s on a new idea.
 
 How to find them (transcripts usually drop fillers, so don't trust the text alone):
 - Best: a verbatim transcript of the ranges you plan to use. `scripts/verbatim.py` runs CrisperWhisper 2.0 in the device VM and writes "[um]"/"[uh]" with ~30-40 ms word times, which `cut_pieces.py` then cuts precisely (isolated, glued or run-in). Needs the model folder from Tim (Hugging Face is blocked here) and, for client work, Nyra's commercial licence: the weights are non-commercial. Setup notes are in the script header (aarch64 VM: torch 2.5.1, transformers backend).
