@@ -6,7 +6,8 @@ edits.json     {"copy": "Oct C1 no-uh (Claude test)", "aroll": "video1",
                 "replace": [{"old": [i, j], "new": [[ss, se], ...], "why": "..."}, ...]}
                old = first and last index (0-based, inclusive) of the A-roll items being replaced;
                new = their replacement source ranges in the same media's frames (end exclusive), in
-               order. Untouched A-roll items stay exactly as they are; gaps between items are kept.
+               order; "new": [] removes them (items that sat only on them are dropped, markers move to the
+               join). Untouched A-roll items stay exactly as they are; gaps between items are kept.
 Every other item (B-roll, Gyroflow, angle tracks, markers) keeps its length and moves with the
 words it sat on: its start is mapped through the A-roll by source time; one that started exactly at
 an A-roll join starts at the new join; one that sat in a gap keeps its distance to the piece before.
@@ -67,6 +68,8 @@ def M(r):
             g = groups[gidx[k]]; sf = fps_of(it)
             src = it["ss"] + (r - it["s"]) * sf / TL_FPS
             mine = [p for p in pieces if p["group"] == gidx[k]]
+            if not mine:                                          # group removed ("new": []): collapses to its join
+                return g["ns"]
             if r == it["s"]:                                      # started at a join: keep it at the join
                 p = next((p for p in mine if p["se"] > src), mine[-1])
                 return p["ns"]

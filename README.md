@@ -100,3 +100,4 @@ Rules were learned from Namir Mikha C6, C1 and C7 and reviewed by Tim on the "Ti
 0.20.0 (11 Nov 2026, Hired Home Nov S2 C4): no glitch slivers, no reuse across concepts [Tim].
 - B-roll edges land exactly on A-roll cuts. broll_gate.py checks slivers per timeline item (it used to merge back-to-back A-roll pieces of the same camera clip, which hid a 1-frame flash of the speaker) and names the B-roll edge to move. recut_plan.py keeps every edge that sat on (or within 3 frames of) a join on the new join.
 - aroll-cut: scripts/reuse_check.py lists every source range a concept shares with the project's other timelines (File Path matching); no A-roll take is reused across concepts without Tim's yes, run before cutting and before hand-over.
+0.20.1 (11 Nov 2026): recut_plan.py can remove A-roll sections ("new": []); items that sat only on them are dropped, markers move to the join (used to take the bloopers out of Hired Home Nov S2 C4).
