@@ -2,7 +2,7 @@
 name: broll
 description: "This skill should be used when adding or fixing B-roll on a Beon Media concept edit in DaVinci Resolve: \"add B-roll\", \"pick shots for this line\", \"use shots we haven't used\", \"fix this shot\", \"pacing pass\" (checking placed B-roll is the qa-loop skill and its qa-manager agent). Covers Tim's B-roll rulebook (speed and reasons, Gyroflow, movement flow, framing and zoom, placement), selection, placement, the hard gate, the pacing gate, handing to the qa-manager agent, and the fix ladder (re-pick, Gyroflow, slow down, replace) for its findings.\n"
 metadata:
-  version: "0.8.0"
+  version: "0.9.0"
 ---
 
 # B-roll (Tim, Beon Media)
@@ -34,6 +34,9 @@ Every shoot goes through Tim's Footage Prep app (the `footage-prep` MCP tools) b
 1. `library_shoots` (query = client or shoot). If the folder isn't there, `inspect_folder` then `import` it (client name, `watch: false`) and wait on `progress` until analysis is done. Opening a shoot switches the app, so never pass `switch_shoot` unless Tim asked.
 2. Pick only from the app's selects: `selects` with `without_flags: ["shaky","whip","motion_blur","blocked"]`, inside each select's `in_frame`/`out_frame`. Prefer `auto_tier`/Tim's tier `hero` and `metrics.stability` >= ~0.75; below ~0.65 only when it's the only shot for the line, and flag it. Skip clips the app rates `reject` (`clips` with `auto_tier`).
 3. Match every shot to its line first (what's said on screen), then flow: similar moves and speeds in a run (slow a faster shot to `match` its neighbours), the same room twice in a row only from a different angle, settle before a cut back to camera.
+   - Read the sort keys in the shot log first (`scene`, `place`, `good_for`, `not_for`; shotlog skill) and match them to the line before looking at frames.
+   - Reject two shots side by side when they share a `setup`, or a `take_family`, or both `scene` and `shot_size`. Reject any run of 3 or more with the same `place.id`.
+   - Write `usage[].reason` for every shot placed: the line, then the same record the sort uses (e.g. "line 'the kitchen': place=kitchen scene=kitchen-1 setup=kitchen-1-s03 fp=hero stab 0.91").
 4. Stabilisation renders are Tim's to start in the app; list the shots that need them.
 5. Mention in the report which app selects (clip, frames, score, stability) were used.
 6. Second look: Footage Prep's scorer chooses, but check its winner once more before placing (subject, people, 9:16 framing, smoothness of the stretch actually used). Note it in the report.

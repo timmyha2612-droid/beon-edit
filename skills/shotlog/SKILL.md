@@ -2,7 +2,7 @@
 name: shotlog
 description: "This skill should be used for any footage task on a Beon Media shoot (sorting, selects, B-roll, interview cuts, grading) to read and keep Tim's per-shoot shot log (_shotlog/ in each shoot folder). Read it first, analyse only what's missing, write back after. Triggers: \"use the shot log\", \"which clips are steady\", \"what did we use in C6\", \"log this shoot\".\n"
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
 ---
 
 # Shot log (Beon Media shoots)
@@ -29,7 +29,20 @@ Goal: never analyse the same footage twice. Every shoot folder gets a `_shotlog/
 
 Each clip keeps what came from where. `footage_prep{tier, auto_tier, flags[], movement, metrics{stability, jitter, shaky_frac, ...}, selects[{in_frame, out_frame, score}], synced}` is copied from the app as-is, never edited by hand. Claude's analysis goes in the fields below. When the two disagree, keep both and add a `verified_frames` note or a `warning` saying which one held up on the second look.
 
-`clip, file, camera, log_profile, fps, duration_s, bin, content, people, shot_move, notes, gyro{shake_med, shake_p90, speed_med, windows{1.0,2.0,3.0: [{t, shake, move, steady}]}, shake_1s[]}, audio{mean_db, max_db, silence_pct, flags}, people_windows[{t, len, people_avg, faces_avg, face_x}], verified_frames[{t, note}], motion[{t_in, dur, speed, move, jitter_p90_px, flags}], transcript{file, words, engine}, usage[{concept, timeline, slot, src_in, src_out, rec_frames, speed, line, role, status: placed|planned|final, warning}]`.
+`clip, file, camera, log_profile, fps, duration_s, bin, content, people, shot_move, notes, gyro{shake_med, shake_p90, speed_med, windows{1.0,2.0,3.0: [{t, shake, move, steady}]}, shake_1s[]}, audio{mean_db, max_db, silence_pct, flags}, people_windows[{t, len, people_avg, faces_avg, face_x}], verified_frames[{t, note}], motion[{t_in, dur, speed, move, jitter_p90_px, flags}], transcript{file, words, engine}, usage[{concept, timeline, slot, src_in, src_out, rec_frames, speed, line, role, reason, status: placed|planned|final, warning}]`. `reason` is one plain line on why the clip went in (or was dropped): the line it matches, and for B-roll the place, scene, setup, Footage Prep tier and stability.
+
+### Sort keys (owned by resolve-footage-sort)
+
+The footage sort writes these per clip. Other skills read them, only the sort (or Tim) changes them:
+
+- `sort{v, axis, at, approved, archive_only, bin_verified, tim[]}`: sort version (must be "0.3", the inventory treats any other v as not sorted), axis (place, subject or concept), when, whether Tim approved it at the gate (false after "Only write the shot log"), archive only (a reject or unsure clip with no copy), the day the copy was verified, and `tim`, the list of Tim's changes `{field, from, to, date}` (taxonomy section 7).
+- `scene`, `setup`, `take_family`, `dup_of`: which scene and camera setup the clip belongs to, its group of takes, and the clip it duplicates.
+- `place{id, family, inferred}`, `subject`, `concept`: what and where. All three are kept whatever axis the bins use.
+- `shot_size`, `angle`, `light`, `people_detail{count, role, faces, names, minors_visible}`, `roles` (taxonomy list: aroll, establishing, place, people, detail, transition, junk), `good_for`, `not_for`, `vertical`, `subject_x` (0-1, for 9:16 Pan), `confidence`.
+- `sort_role`: the rule role from the inventory (aroll, multicam_angle, audio, broll, junk_candidate).
+- `sort_copy{bin, uid}`: the copy's bin relative to the shoot bin (`01 Park`) and its Resolve UniqueId. sort_apply writes it only after a verified copy. `bin` then holds the copy's full bin path. The original stays at the root of the shoot bin, which is the archive.
+
+Technical state (tier, flags, movement, stability, selects) is read live from Footage Prep when needed, never copied into the sort keys.
 
 Top level: `schema, updated, client, shoot, property, footage_prep{available, shoot, imported, synced}, jobs[] (job card paths), days, people{name: description}, conventions, interviews[{clip, transcript, source_files, best_lines, avoid, usage}], lessons[]`.
 

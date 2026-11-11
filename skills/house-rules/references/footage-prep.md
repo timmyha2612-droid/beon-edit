@@ -44,3 +44,5 @@ they are named like `library_shoots`, `inspect_folder`, `import`, `progress`, `s
 Merge, don't replace: the shot log keeps one block per source, so it's always clear who said what
 (shotlog skill, `footage_prep` and `claude` blocks per clip). Stabilisation renders inside the app are
 Tim's to start; list the shots that need them.
+
+Sorted bins hold copies tagged `beon.sort_copy`. Send picks the first pool clip it meets per file path, so run Send before the sort, or re-run sort_apply after a Send to re-copy markers to the copies.

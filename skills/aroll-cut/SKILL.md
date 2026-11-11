@@ -2,7 +2,7 @@
 name: aroll-cut
 description: "This skill should be used when building or tightening the interview (A-roll) cut of a Beon Media concept video in DaVinci Resolve: \"put together the A-roll\", \"cut the interview\", \"build the meat first\", \"tighten the pauses\", \"take out the ums\", \"remove the stutters\", \"follow this story\", or fixing cuts that sound rough or clipped. Covers story beats, dialogue cutting, removing fillers and stutters while keeping the speech flowing, air at joins, multicam, punch-ins, jump cuts and verification.\n"
 metadata:
-  version: "0.3.2"
+  version: "0.4.0"
 ---
 
 # A-roll cut (Tim's method)
@@ -18,6 +18,8 @@ Build the spoken spine first. Tim reviews it before any B-roll goes on.
 - Use the strongest answers. When the speaker repeats himself, use the final version (usually the cleanest).
 - Cut from Tim's multicam when it exists; A cam only unless told. Single-cam interviews use punch-ins (below).
 - Read the shot log `interviews` entry for transcripts, best lines and `avoid` lists. Transcribe if missing.
+- Find interview clips and angles by their `sort_role` in the shot log: `aroll` for the main take, `multicam_angle` for other angles.
+- Every take or line cut in or dropped gets a `usage[].reason` in the shot log (e.g. "dropped: repeats line 4, cleaner take at 3:12").
 - Show Tim the beat list and lines (pop-up questions with suggested choices) before cutting when the brief leaves choices open.
 
 ## 2. Cutting rules

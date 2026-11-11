@@ -2,7 +2,7 @@
 name: house-rules
 description: "This skill should be used at the start of any editing job for Tim at Beon Media (DaVinci Resolve concept videos, interviews, B-roll, colour grading, footage sorting), when Tim says \"start the edit\", \"put together concept X\", \"help me with the A-roll / B-roll / grade\", \"learn my edit\", when deciding which Beon editing skill applies, or whenever any other beon-edit stage skill is about to start and no job card exists for this job yet. It holds the working agreement, the mandatory opening grilling and job card, and the map of the other skills.\n"
 metadata:
-  version: "0.6.0"
+  version: "0.7.0"
 ---
 
 # Beon edit: house rules
@@ -16,7 +16,7 @@ How to work with Tim on any edit. Read this first, then load the skill for the s
 | 0 | house-rules | Every job: working agreement, grilling and job card (hard rule), routing |
 | 0 | client-styles | Every client job: read the client's profile before grilling |
 | 1 | Footage Prep app (`footage-prep` MCP) | Every footage task, first: import, analyse, use its scores and selects. Not reachable: tell Tim in one line and fall back (`references/footage-prep.md`) |
-| 1 | resolve-footage-sort | Sorting raws into bins, logging audio and interviews |
+| 1 | resolve-footage-sort | Every edit job, at the start, before B-roll: sort raws into bins, log audio and interviews, write the sort keys to the shot log |
 | 1 | shotlog | Any footage task: read the shoot's log first (it merges Footage Prep with Claude's analysis), write back after |
 | 2 | aroll-cut | Story beats and the interview cut (the "meat") |
 | 3–5 | broll | Picking, placing and fixing B-roll by Tim's B-roll rulebook (`broll/references/broll-rulebook.md`). Its HARD GATE runs on every pass: broll_auto.py → snippet → gyroflow_headless.py → broll_gate.py PASS |
@@ -26,7 +26,7 @@ How to work with Tim on any edit. Read this first, then load the skill for the s
 | 7 | finish-pass | What Tim does at the end, and how to set the edit up for it |
 | all, then 8 | learn-from-tim + `beon-edit:learner` agent | Always on: log every correction and piece of knowledge in the lessons inbox as it's given; at the end of every job, the learner proposes rules, Tim approves, then the plugin is updated |
 
-Typical order: brief → client profile → grill → job card → Footage Prep → ingest/shot log → A-roll → QA → Tim reviews → B-roll select and place → pacing gate → QA → Tim watch-down → grade → QA → subtitles → QA → final QA on the render → Tim's finish → learn.
+Typical order: brief → client profile → grill → job card → Footage Prep → shot log → footage sort → A-roll → QA → Tim reviews → B-roll select and place → pacing gate → QA → Tim watch-down → grade → QA → subtitles → QA → final QA on the render → Tim's finish → learn.
 
 ## Grill first, every job, no exceptions [Tim, 9 Nov 2026]
 
