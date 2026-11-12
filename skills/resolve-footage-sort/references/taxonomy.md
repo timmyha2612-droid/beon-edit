@@ -61,4 +61,5 @@ Mixed shoots use families from more than one row, in journey order. Granularity 
 - Place ids: kebab-case (`corner-park`).
 - Scene ids: `<place-id>-<n>`, a new n each time the place comes back in a later session or light.
 - Setup ids: `<scene-id>-s<nn>`.
+- Take family ids (one shot filmed more than once, partial takes included): `<scene-id>-shot<nn>`. Per clip `take: {n, of, cover: full|start|middle|end|false_start, best}`, one `best` per family. A setup can hold several shots, and a shot's takes can sit in different setups (the fingerprint splits reframed takes).
 - `sort.editor_changes` entries: `{field: place|scene|roles|good_for|bin, from, to, date, editor}` (`editor` = editor.json `name`). Older logs call the list `sort.tim` (no `editor`): read both, write `editor_changes`. learn-from-tim counts these per field and per client.

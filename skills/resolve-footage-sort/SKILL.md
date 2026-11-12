@@ -71,6 +71,12 @@ Tier is the editor's tier from Footage Prep when set, else auto_tier. If nothing
 ### Step 5. Claude reads the sheets, writes `looks.json`
 Read every sheet once with its map. One entry per setup: place, subject, concept, shot_size, angle, light, people_detail, content, roles, good_for, not_for, vertical, subject_x, confidence. A clip that differs from its setup (a tighter take) goes in `overrides`.
 
+**Takes of one shot** [Tim, 13 Nov 2026]: shooters often film the same shot several times, and some takes only cover part of it (the walker enters halfway, the move stops early, a false start). Label these as takes of one shot, never as different shots. A shot is one intent: same subject, same action, same camera position and move, even when a take is reframed a little or the fingerprint put it in another setup (`maybe` band). For each shot with more than one take, write in `looks.json` (and later the shot log):
+- `take_family`: one id per shot (`<scene-id>-shot<nn>`, e.g. `bakery-1-shot02`), the same on every take.
+- `take`: `{n, of, cover, best}`. `n` is the take number in shoot order (1 = first filmed), `of` the number of takes, `cover` is `full` or the part it covers (`start`, `middle`, `end`, `false_start`), and `best: true` on the one take to reach for first (full cover, best Footage Prep score). One `best` per shot.
+- One `content` line for the shot, plus what differs per take ("take 3: she enters halfway").
+Check every `maybe` pair and every run of near-identical sheet cells for this before naming anything.
+
 Second look (one 960 px frame or a 640 px strip), about 10% of setups: low confidence, a bin that ends up with 1 or 2 clips, sign text or a brand that decides a not_for, a person a concept will need. Describe people by clothing and action. Never name them unless the people registry (`shoot.people`) or the editor does. Still unsure: listed, no copy, stays only in the archive.
 
 ### Step 6. Claude writes `plan.json`
@@ -82,7 +88,7 @@ Derive scenes (same place, same session, no light change), pick the axis, then b
 ### Step 7. Gate (pop-up question tool)
 Table: bin | clips | clip ranges | B-roll ready | hero moments | what is in it. B-roll ready = clips with a hero clean select at stability 0.75 or more, read live.
 
-Below it: the proposed axis and the other two in one line each, judgement calls, unsure clips, rejects (archive only), thin bins (B-roll ready under 3), not_for warnings (brand, political, minors, recognisable strangers), excluded items, mismatches, and the archive rename if any.
+Below it: the proposed axis and the other two in one line each, take families (shot | takes | best take | partial takes and what they cover), judgement calls, unsure clips, rejects (archive only), thin bins (B-roll ready under 3), not_for warnings (brand, political, minors, recognisable strangers), excluded items, mismatches, and the archive rename if any.
 
 Options: Approve / I'll change some / Only write the shot log (`sort_apply.py plan.json --shotlog-only --shotlog <log> --apply`, no Resolve calls) / Stop. The editor's changes come back as plain lines ("0123 to Details", "rename 05 to Park"). Update `plan.json`, record them in `sort.editor_changes` (older logs call it `sort.tim`: read both, write `editor_changes`), show the table again only if bins changed.
 
@@ -127,7 +133,7 @@ Families per shoot kind (property, suburb, event, office, signboards, interview,
 - **Clip crossing two places:** bin by where its best select lies. Record `places_in_clip`.
 - **Passers-by:** stay in their place bin. Only a registry person as subject gets a People bin. At events where guests are the content, Guests and Mingling is a place bin.
 - **Rejects:** archive only, no copy. They still get a content line so the editor can rescue one. A place with only a reject is listed as thin at the gate.
-- **Retakes:** never left out for being a retake. The whole take family is copied.
+- **Retakes and partial takes:** one shot, one `take_family` (Step 5). Never left out for being a retake: the whole family is copied into the same bin, side by side, named as takes of one shot (section 5). A partial take is still a take of that shot, not a new shot. A family with every take rejected stays in the archive, listed once at the gate.
 - **Usable or hero with flags:** copied as normal. B-roll filters on FP flags later.
 - **Per-card clients:** follow the client profile `sort_mode`. Ask once if it is not set.
 - **Already sorted bins:** reuse them. Never touch a bin the editor made.
@@ -137,6 +143,7 @@ Families per shoot kind (property, suburb, event, office, signboards, interview,
 - The originals never move and never get renamed. Rejects live only in the archive.
 - Each non-reject, non-unsure clip gets a second pool clip: the same file imported into its numbered bin. Resolve makes it a separate clip with a new MediaId. The original is untouched.
 - The copy's Clip Name is descriptive and always ends in the camera clip number: `Bakery front wide C0123`.
+- Takes of one shot share the shot name and add the take: `Bakery front walk T1 C0123`, `Bakery front walk T2 C0124`, a partial take says which part (`Bakery front walk T3 end C0125`, `... T4 false start C0126`), and the best take adds `best` (`Bakery front walk T2 best C0124`). Never give takes of one shot different names that make them read as different shots.
 - Footage Prep markers (color, name, note, duration, customData) and keywords are copied over. Sort keywords are appended, never replaced: `place:<id>`, `subject:<id>`, `concept:<id>` (when set) and the primary role as `role:<role>` (`role:establishing`), so a role never reads like a bare copy of `place:<id>`.
 - Every copy gets `beon.sort_copy = 1` and `beon.sort_src = <original UniqueId>` as third-party metadata.
 - Reruns skip copies already in the target bin (same File Path plus `beon.sort_copy`), so a half-finished run resumes.
@@ -168,5 +175,5 @@ The skill and scripts carry generic examples only. No client names, people, addr
 
 - `manifest.json`: `{shoot_bin, project, generated_at, sort_v, clips:[{key (File Path), name, uid, folder, duration_s, fps, recorded_at, camera, fp:{clip_path, tier, auto_tier, movement, chips, stability, best_score, flags, selects:[{in_s, out_s, score, stability}], duplicate_of}, state, now_in, copies, probe_error, role, excluded_reason}], excluded:[{name, reason}], mismatches:{in_resolve_not_fp, in_fp_not_resolve}}`.
 - `groups.json`: `{sessions:[{id, clip_keys}], setups:[{id, session, leader_key, member_keys, keyframe_s, d_prev, band (new|maybe), maybe_of}], sheets:[{file, map_file}], strips:[{clip_key, file}], clip_setup, errors}`. Same-setup clips are members, so band is never `same`.
-- `looks.json` (Claude): `{setups:{<setup id>:{place, subject, concept, shot_size, angle, light, people_detail, content, roles, good_for, not_for, vertical, subject_x, confidence}}, overrides:{<key>:{...}}}`.
+- `looks.json` (Claude): `{setups:{<setup id>:{place, subject, concept, shot_size, angle, light, people_detail, content, roles, good_for, not_for, vertical, subject_x, confidence}}, overrides:{<key>:{...}}, takes:{<key>:{take_family, take:{n, of, cover, best}}}}`.
 - `plan.json` (Claude, after the gate): `{project, shoot_bin, axis, archive:{rename_to}, bins:[{name, parent}], copies:[{key, uid, bin, clip_name}], shotlog_updates:{<key>:{...sort fields, sort:{archive_only}}}}`.

@@ -1,6 +1,6 @@
 {
   "name": "beon-edit",
-  "version": "0.23.0",
+  "version": "0.24.0",
   "description": "Beon Media's editing system for concept videos in DaVinci Resolve: mandatory opening grilling and job card, Footage Prep first, shot log, footage sort, A-roll cutting, B-roll rulebook, a QA manager agent that checks every stage (with a second-look verifier), colour grading, per-client subtitles (Fluid Reveal Words), finishing, and a learning agent that logs every correction as general / client / concept and updates the rules after the editor's yes (the plugin owner pushes; other editors send a pull request). Every job starts from a standard intake: editor setup, client profile, shoot block and job card.",
   "author": {
     "name": "Tim (Beon Media)"

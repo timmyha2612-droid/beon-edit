@@ -68,7 +68,7 @@ Each clip keeps what came from where. `footage_prep{tier, auto_tier, flags[], mo
 The footage sort writes these per clip. Other skills read them, only the sort (or the editor) changes them:
 
 - `sort{v, axis, at, approved, archive_only, bin_verified, editor_changes[]}`: sort version (must be "0.3", the inventory treats any other v as not sorted), axis (place, subject or concept), when, whether the editor approved it at the gate (false after "Only write the shot log"), archive only (a reject or unsure clip with no copy), the day the copy was verified, and `editor_changes`, the list of the editor's changes `{field, from, to, date, editor}` (taxonomy section 7). Older logs call it `tim`: read both, write `editor_changes`.
-- `scene`, `setup`, `take_family`, `dup_of`: which scene and camera setup the clip belongs to, its group of takes, and the clip it duplicates.
+- `scene`, `setup`, `take_family`, `take`, `dup_of`: which scene and camera setup the clip belongs to, the shot it is a take of (`take_family`, one id per shot), which take it is (`take: {n, of, cover: full|start|middle|end|false_start, best}`), and the clip it duplicates. Takes of one shot are one shot, never separate shots [Tim, 13 Nov 2026].
 - `place{id, family, inferred}`, `subject`, `concept`: what and where. All three are kept whatever axis the bins use.
 - `shot_size`, `angle`, `light`, `people_detail{count, role, faces, names, minors_visible}`, `roles` (taxonomy list: aroll, establishing, place, people, detail, transition, junk), `good_for`, `not_for`, `vertical`, `subject_x` (0-1, for 9:16 Pan), `confidence`.
 - `sort_role`: the rule role from the inventory (aroll, multicam_angle, audio, broll, junk_candidate).
