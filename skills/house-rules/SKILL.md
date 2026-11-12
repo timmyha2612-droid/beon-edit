@@ -2,7 +2,7 @@
 name: house-rules
 description: "This skill should be used at the start of any Beon Media editing job (DaVinci Resolve concept videos, interviews, B-roll, colour grading, footage sorting, subtitles), when the editor says \"start the edit\", \"put together concept X\", \"help me with the A-roll / B-roll / grade\", \"learn my edit\", when deciding which Beon editing skill applies, when ~/.beon-edit/editor.json is missing (first use on a machine), or whenever any other beon-edit stage skill is about to start and no job card exists for this job yet. It holds the working agreement, the intake (editor setup, client profile, shoot, job card), the mandatory opening grilling and the map of the other skills.\n"
 metadata:
-  version: "0.8.0"
+  version: "0.9.0"
 ---
 
 # Beon edit: house rules
@@ -44,6 +44,25 @@ QA → editor watch-down → grade → QA → subtitles → QA → final QA on t
 Every concept is different, and jobs have started without anyone being asked. So the intake is a hard
 rule, and every stage skill checks for the job card before it works. Ask everything through the pop-up
 question tool, with suggested answers (recommended first). The editor answers everything.
+
+**Compulsory, and in one go** [Tim, 12 Nov 2026, Simone 1 Arthur St C5: "this step must be compulsory
+and need to be done in one go"]. On that job the questions came out in pieces between footage searches
+and transcription, and the card was only written after Tim asked when the grilling would start.
+
+1. **Prep (reads only).** Read the brief, editor.json, the client profile, the shoot block and the card.
+   Find the footage and do only the reading the questions need: list clips, transcribe to find the
+   takes, a contact sheet. Build nothing yet: no cut planning past naming the candidates, no B-roll
+   picks, no Resolve writes.
+2. **Say it starts.** One line: "Starting the grilling: N questions in M pop-ups."
+3. **Ask everything in one block.** Ask all of §1-§3 back to back (4 questions per pop-up, the next pop-up
+   straight after, no other tool calls between). That covers the client-profile `ask` fields and open
+   questions, the shoot block, and every job-card line the files don't answer: length, beats or takes,
+   speakers, stages, delivery, framing, timeline name, subtitles, music, end card, B-roll scope.
+   Every concept in the request gets its block before any of them is built.
+4. **Write the card at once** (real card plus session copy), then start stage work.
+5. **No questions in drips afterwards.** After the card, ask only stage-time questions (intake §6) or
+   things the footage turned up that the grilling couldn't know (say which). Something that belonged in
+   the grilling and was missed: say so, ask it, and add it to the card.
 
 ### 0. Editor setup (once per person and computer)
 
