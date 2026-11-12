@@ -1,17 +1,25 @@
 #!/usr/bin/env python3
 """Rough A-roll picks -> clean, flowing sub-pieces and a ready AppendToTimeline list, in one pass.
-usage: cut_pieces.py plan.json [out.json]
+usage: cut_pieces.py plan.json [out.json] [--card JOB.md] [--shoot FOLDER] [--lang en] [--tl-fps 24]
 plan.json:
  {"transcript": ".../_shotlog/transcripts/CLIP.json",  # same formats as filler_scan.py
   "wav": "a.wav",               # mono 16 kHz mic channel, time 0 = source clip start
   "video": "/path/A_cam.MP4",   # optional, for cut_review.py
   "src_fps": 25, "src_offset": 0.0,   # Resolve source frame = round((t + src_offset) * src_fps)
-                                      # (multicam clip: src_fps 24 and the A angle's offset)
+                                      # (multicam clip: src_fps = timeline fps and the angle's offset,
+                                      #  shoot.multicam.angle_offsets_s)
   "tl_fps": 24, "record_start": 0, "track": 1,
+  "card": ".../_shotlog/jobs/C1.md",  # optional (or --card): tl_fps from its Delivery line / client profile
+  "shoot": ".../<shoot folder>",      # optional (or --shoot; default the card's Shoot line): shoot.audio,
+                                      #  shoot.multicam, shoot.cameras[].fps and shoot.language
+  "lang": "en",                       # optional (or --lang): filler and function-word lists
   "fillers": "flag",            # "flag" lists likely ums/uhs; "cut" also removes the isolated ones
   "pans": {"Q1": 85},           # optional, per label, for cut_review.py
   "pieces": [[a, b, "Q1"], ...]}  # source seconds; transcript times are fine (drift is handled)
-What it does per piece (Tim's rules, aroll-cut SKILL.md section 2 and 2b):
+Missing values: src_fps = the plan, else the timeline fps when shoot.multicam.exists, else the mic
+camera's fps (shoot.audio.mic_camera in shoot.cameras), else 25; tl_fps = --tl-fps, else the plan, else
+the job card's delivery fps, else 24.
+What it does per piece (house rules, aroll-cut SKILL.md section 2 and 2b):
   - snaps the in and out to a real silence between words (never inside a word), head air 0.10 s,
     tail air 0.15 s, both limited by the silence that is actually there (flags when it's short);
   - trims mid-sentence hesitations: silences >= 0.25 s are cut down to 0.22 s mid-sentence,
@@ -21,13 +29,17 @@ What it does per piece (Tim's rules, aroll-cut SKILL.md section 2 and 2b):
     0.24 s of silence across the join; glued ones are only flagged (check by ear / energy);
   - lays the sub-pieces end to end from record_start and prints the AppendToTimeline items.
 Then: add "mediaPoolItem" to each append item, append, run cut_review.py, and listen to every flag."""
-import json, math, os, sys
-import numpy as np
+import argparse, json, math, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from filler_scan import load_words, load_audio, energy, steadiness, norm, FILLERS
+from filler_scan import (np, bc, load_words, load_audio, energy, steadiness, norm, FILLERS, fillers_for,
+                         job_language, need_numpy)
 
-FUNCTION = {"and", "the", "a", "an", "i", "we", "to", "so", "it", "is", "that", "but", "of", "in", "our",
-            "my", "you", "they", "it's", "i'm", "we're", "this", "for", "with", "on", "be"}
+# Short words whose stutter ("and and", "the the") is cut automatically, per language. English only so far.
+FUNCTION_BY_LANG = {
+    "en": {"and", "the", "a", "an", "i", "we", "to", "so", "it", "is", "that", "but", "of", "in", "our",
+           "my", "you", "they", "it's", "i'm", "we're", "this", "for", "with", "on", "be"},
+}
+FUNCTION = FUNCTION_BY_LANG["en"]
 HEAD, TAIL = 0.10, 0.15
 KEEP = {"period": 0.45, "comma": 0.35, "mid": 0.22}
 FILL_SIDE = 0.12
@@ -102,7 +114,24 @@ def silence_around(sil, k):
     return a, b
 
 
-def piece(p, words, x, sr, fr, sp, fill_mode):
+def function_for(lang):
+    code = (lang or "en").lower().split("-")[0].split("_")[0]
+    return FUNCTION_BY_LANG.get(code, FUNCTION_BY_LANG["en"])
+
+
+def safety_advice(shoot):
+    """What to say when an answer clips: from shoot.audio when the shoot log has it."""
+    au = (shoot or {}).get("audio") or {}
+    if au.get("safety_channel"):
+        off = au.get("safety_offset_db")
+        return (f"shoot.audio: dialogue on camera {au.get('mic_camera', '?')} ch{au.get('mic_channel', '?')}, "
+                f"safety ch{au['safety_channel']}" + (f" ({off} dB)" if off is not None else "")
+                + "; cut and deliver from the channel that doesn't clip")
+    return ("if the camera recorded a safety channel (e.g. Sony XLR: ch2 about 6 dB lower), cut and deliver "
+            "from that channel instead, and note it in shoot.audio")
+
+
+def piece(p, words, x, sr, fr, sp, fill_mode, fillers=FILLERS, function=FUNCTION, advice=None):
     a, b, label = p
     sil = ~sp
     flags = []
@@ -138,7 +167,7 @@ def piece(p, words, x, sr, fr, sp, fill_mode):
 
     def side(t_before):
         """Air to leave on the left of a filler cut: more after a full stop or comma."""
-        prev = [w for w in ws if w[1] <= t_before + 0.15 and norm(w[2]) not in FILLERS]
+        prev = [w for w in ws if w[1] <= t_before + 0.15 and norm(w[2]) not in fillers]
         pt = prev[-1][2] if prev else ""
         return 0.30 if pt.endswith((".", "?", "!")) else 0.20 if pt.endswith((",", ";", ":")) else FILL_SIDE
 
@@ -157,7 +186,7 @@ def piece(p, words, x, sr, fr, sp, fill_mode):
 
     # transcribed fillers ("[um]", "uh") - from a verbatim transcript (verbatim.py) or the rare ones Resolve keeps
     for s, e, t in ws:
-        if norm(t) not in FILLERS or e <= onset or s >= offset:
+        if norm(t) not in fillers or e <= onset or s >= offset:
             continue
         before, after = sil_near(s, True), sil_near(e, False)
         c0 = before[0] / 100 + min(side(s), (before[1] - before[0]) / 200) if before else boundary(x, sr, s - 0.12, s + 0.12, fr)
@@ -217,7 +246,7 @@ def piece(p, words, x, sr, fr, sp, fill_mode):
                 flags.append(f"LIKELY FILLER run into the next word ('uh-making'): {desc}; "
                              + (f"word starts at {c1:.2f}, cut {c0:.2f}-{c1:.2f}" if c1 is not None else "no clear word start: leave it or use another take"))
         else:
-            flags.append(f"LIKELY FILLER inside continuous speech: {desc}; another take or leave it, tell Tim")
+            flags.append(f"LIKELY FILLER inside continuous speech: {desc}; another take or leave it, tell the editor")
     # stutters: the same word twice in a row ("and and", "the the") -> keep the second
     inner = [w for w in ws if w[0] >= onset - 0.3 and w[1] <= offset + 0.3]
     for w1, w2 in zip(inner, inner[1:]):
@@ -234,7 +263,7 @@ def piece(p, words, x, sr, fr, sp, fill_mode):
             continue
         c0 = b1[0] / 100 + min(FILL_SIDE, (b1[1] - b1[0]) / 200)
         c1 = b2[1] / 100 - min(FILL_SIDE, (b2[1] - b2[0]) / 200)
-        if fill_mode == "cut" and norm(w1[2]) in FUNCTION:
+        if fill_mode == "cut" and norm(w1[2]) in function:
             cuts.append((c0, c1, f"stutter '{w1[2]} {w2[2]}'"))
             flags.append(f"CUT stutter '{w1[2]} {w2[2]}' at {w1[0]:.2f}; listen to the join")
         else:
@@ -264,25 +293,51 @@ def piece(p, words, x, sr, fr, sp, fill_mode):
     subs = [s for s in subs if s[1] - s[0] > 0.04]
     clip = int((np.abs(x[int(h0 * sr):int(t1 * sr)]) >= 0.999).sum())
     if clip:
-        flags.append(f"AUDIO: {clip} clipped samples in this answer; if the camera recorded a safety channel "
-                     "(Sony XLR: ch2 about 6 dB lower), cut and deliver from that channel instead")
+        flags.append(f"AUDIO: {clip} clipped samples in this answer; " + (advice or safety_advice(None)))
     return {"label": label, "onset": round(onset, 3), "offset": round(offset, 3),
             "text": " ".join(w[2] for w in ws if w[0] >= onset - 0.3 and w[1] <= offset + 0.3),
             "subs": subs, "flags": flags}
 
 
+def settings(plan, a):
+    """(src_fps, tl_fps, shoot, lang) from the flags, the plan, the job card and the shoot log."""
+    card_path = a.card or plan.get("card")
+    card = bc.load_card(card_path) if bc and card_path else {}
+    shoot = bc.load_shoot(a.shoot or plan.get("shoot") or card.get("Shoot")) if bc else {}
+    tfps = a.tl_fps or plan.get("tl_fps") or (bc.delivery(card)["fps"] if bc and card else 24)
+    sfps = plan.get("src_fps")
+    if sfps is None:
+        cams = {c.get("role"): c for c in shoot.get("cameras") or []}
+        mic = cams.get((shoot.get("audio") or {}).get("mic_camera")) or {}
+        sfps = tfps if (shoot.get("multicam") or {}).get("exists") else mic.get("fps") or 25
+        print(f"src_fps not in the plan: using {sfps} (check it matches the clip you append)")
+    lang = a.lang or plan.get("lang") or job_language(None, a.shoot or plan.get("shoot"), card_path)
+    return float(sfps), float(tfps), shoot, lang
+
+
 def main():
-    plan = json.load(open(sys.argv[1]))
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("plan"); ap.add_argument("out", nargs="?")
+    ap.add_argument("--card", help="job card: tl_fps from its Delivery line / client profile")
+    ap.add_argument("--shoot", help="shoot folder: shoot.audio, shoot.multicam, shoot.cameras, shoot.language")
+    ap.add_argument("--lang", help="language code for the filler lists (default: shoot / client / en)")
+    ap.add_argument("--tl-fps", type=float, help="timeline fps (overrides the plan and the card)")
+    a = ap.parse_args()
+    need_numpy()
+    plan = json.load(open(a.plan))
+    sfps, tfps, shoot, lang = settings(plan, a)
+    fillers, function, advice = fillers_for(lang), function_for(lang), safety_advice(shoot)
     words = load_words(plan["transcript"])
     x, sr = load_audio(plan["wav"])
     fr = energy(x, sr)
     sp = clean(fr > np.percentile(fr, 10) + 12)
-    sfps, off, tfps = float(plan.get("src_fps", 25)), float(plan.get("src_offset", 0)), float(plan.get("tl_fps", 24))
+    off = float(plan.get("src_offset", 0))
     rec, track = int(plan.get("record_start", 0)), int(plan.get("track", 1))
-    out = {k: plan.get(k) for k in ("video", "wav", "transcript", "src_fps", "src_offset", "tl_fps", "pans")}
+    out = {k: plan.get(k) for k in ("video", "wav", "transcript", "src_offset", "pans")}
+    out["src_fps"], out["tl_fps"] = sfps, tfps
     out["pieces"], out["append"] = [], []
     for p in plan["pieces"]:
-        r = piece(p, words, x, sr, fr, sp, plan.get("fillers", "flag"))
+        r = piece(p, words, x, sr, fr, sp, plan.get("fillers", "flag"), fillers, function, advice)
         for s in r["subs"]:
             D = int(round((s[1] - s[0]) * tfps))
             sf = int(round((s[0] + off) * sfps))
@@ -301,12 +356,10 @@ def main():
             print("   !", f)
     out["record_end"] = rec
     print(f"total {(rec - int(plan.get('record_start', 0))) / tfps:.2f}s, ends at record frame {rec}")
-    dst = sys.argv[2] if len(sys.argv) > 2 else os.path.splitext(sys.argv[1])[0] + "_cut.json"
+    dst = a.out or os.path.splitext(a.plan)[0] + "_cut.json"
     json.dump(out, open(dst, "w"), indent=1)
     print("wrote", dst)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        sys.exit(__doc__)
     main()

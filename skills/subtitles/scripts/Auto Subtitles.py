@@ -20,6 +20,11 @@ Your timeline's existing clips are never moved. Decompose the placed clip
 import re
 import time
 
+# Runs inside Resolve, so it can't read the intake files. Where its values come from:
+# fps from the timeline itself; the look from the selected styled title (match it to the job card
+# Subtitles line, confirmed by the editor); transcription language from Resolve's project settings
+# (set it to shoot.language / the client profile language). The timing constants below are Beon
+# house rules: Claude edits them only if the job card says otherwise.
 TITLE = "Fluid Reveal Words"
 MAX_LINE = 24          # characters per line
 MAX_LINES = 2

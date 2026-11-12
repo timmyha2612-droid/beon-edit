@@ -2,6 +2,8 @@
 """Generate the Fluid Reveal (letters), Fluid Reveal Words and Beon Name Title presets for DaVinci Resolve."""
 import sys
 
+if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
+    sys.exit("usage: build_presets.py OUT_DIR")
 OUT_DIR = sys.argv[1]
 MAX_WORDS = 12
 
@@ -433,9 +435,10 @@ def build_words(hook=False, kinetic=False):
         f'INPID_InputControl = "SliderControl", INP_Default = -1, INP_MinScale = -1, INP_MaxScale = 120, INP_MinAllowed = -1, '
         f'IC_Visible = false, ICS_ControlPage = "Controls" }},\n' for k in range(1, MAX_WORDS + 1))
     if hook:
-        # Accent = Main's own TopLeft colour (warm highlighter yellow by default).
-        word_time_inputs += ("\t\t\t\t\t\tTopLeftRed = Input { Value = 1, },\n\t\t\t\t\t\tTopLeftGreen = Input { Value = 0.82, },\n"
-                             "\t\t\t\t\t\tTopLeftBlue = Input { Value = 0.25, },\n\t\t\t\t\t\tPopAmount = Input { Value = 0.10, },\n"
+        # Accent = Main's own TopLeft colour. White by default: never yellow in subtitles [Tim, 3 Nov 2026];
+        # a client accent comes from the job card Subtitles line, set per job in the Inspector.
+        word_time_inputs += ("\t\t\t\t\t\tTopLeftRed = Input { Value = 1, },\n\t\t\t\t\t\tTopLeftGreen = Input { Value = 1, },\n"
+                             "\t\t\t\t\t\tTopLeftBlue = Input { Value = 1, },\n\t\t\t\t\t\tPopAmount = Input { Value = 0.10, },\n"
                              "\t\t\t\t\t\tPopDur = Input { Value = 6, },\n\t\t\t\t\t\tHiWeight = Input { Value = 0.02, },\n"
                              "\t\t\t\t\t\tHiSnap = Input { Value = 1.5, },\n")
         word_time_inputs += "".join(f"\t\t\t\t\t\tHi{k} = Input {{ Value = 0, }},\n" for k in range(1, MAX_WORDS + 1))
@@ -506,8 +509,8 @@ def build_words(hook=False, kinetic=False):
     )
     if hook:
         inputs += (f'\t\t\t\tHiRed = InstanceInput {{ SourceOp = "{c}", Source = "TopLeftRed", Name = "Highlight Color", ControlGroup = 7, Default = 1, Page = "Highlight" }},\n'
-                   f'\t\t\t\tHiGreen = InstanceInput {{ SourceOp = "{c}", Source = "TopLeftGreen", ControlGroup = 7, Default = 0.82, Page = "Highlight" }},\n'
-                   f'\t\t\t\tHiBlue = InstanceInput {{ SourceOp = "{c}", Source = "TopLeftBlue", ControlGroup = 7, Default = 0.25, Page = "Highlight" }},\n'
+                   f'\t\t\t\tHiGreen = InstanceInput {{ SourceOp = "{c}", Source = "TopLeftGreen", ControlGroup = 7, Default = 1, Page = "Highlight" }},\n'
+                   f'\t\t\t\tHiBlue = InstanceInput {{ SourceOp = "{c}", Source = "TopLeftBlue", ControlGroup = 7, Default = 1, Page = "Highlight" }},\n'
                    f'\t\t\t\tPopAmount = InstanceInput {{ SourceOp = "{c}", Source = "PopAmount", Default = 0.10, Page = "Highlight" }},\n'
                    f'\t\t\t\tPopDur = InstanceInput {{ SourceOp = "{c}", Source = "PopDur", Default = 6, Page = "Highlight" }},\n'
                    f'\t\t\t\tHiWeight = InstanceInput {{ SourceOp = "{c}", Source = "HiWeight", Default = 0.02, Page = "Highlight" }},\n'

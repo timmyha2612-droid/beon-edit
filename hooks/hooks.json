@@ -1,5 +1,5 @@
 {
-  "description": "beon-edit gates: (1) no Resolve edits before the opening grilling and job card; (2) Resolve scripts that place B-roll must carry a reason per shot, retime any slowed shot and flag handheld shots for Gyroflow; (3) during a job, every message gets a reminder to log corrections and knowledge in the lessons inbox.",
+  "description": "beon-edit gates: (1) no Resolve edits (MCP tools, run_script, and the action-style davinci-resolve tools such as timeline and timeline_item; reads always pass) before the editor setup (~/.beon-edit/editor.json) and a filled job card for this session; (2) Resolve scripts that place B-roll must carry a reason per shot, retime any slowed shot and, when Gyroflow is installed, flag handheld shots for Gyroflow; (3) during a job, every message gets a reminder to log corrections and knowledge in the lessons inbox.",
   "hooks": {
     "PreToolUse": [
       {

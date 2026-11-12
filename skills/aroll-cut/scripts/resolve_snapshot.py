@@ -3,7 +3,8 @@ Run through the Resolve MCP run_script tool (sandboxed, no file access): set NAM
 returned JSON as snapshot.json. Touches nothing. Audio items are listed so linked A-roll audio can be
 checked, but resolve_relay.py recreates them from the video items (multicam/A-roll appends bring
 their audio)."""
-NAME = "Oct C1"
+# Runs inside Resolve (no beon_config): NAME is the timeline to snapshot, from the job card Timelines line.
+NAME = "Concept timeline name"
 proj = resolve.GetProjectManager().GetCurrentProject()
 tl = None
 for i in range(proj.GetTimelineCount()):

@@ -2,51 +2,56 @@
 """QA loop bookkeeping (Tim, 9 Nov 2026): rounds, the 3-round limit, and what to do with each finding.
 
 The qa-manager agent returns a findings JSON per stage and round; the qa-verifier agent returns verdicts
-on the judgement findings; Tim answers the creative questions. This script files all of it, compares
+on the judgement findings; the editor running the job answers the creative questions. This script files all of it, compares
 rounds by finding id, and prints the next actions, so the loop never depends on anyone's memory.
 
 usage:
   qa_round.py record  QA_DIR findings.json [--extra]   file a qa-manager result, print the next actions
-                                                       (--extra: a 4th+ round Tim asked for)
+                                                       (--extra: a 4th+ round the editor asked for)
   qa_round.py verify  QA_DIR STAGE ROUND verdicts.json merge qa-verifier verdicts, print the next actions
-  qa_round.py tim     QA_DIR STAGE answers.json         record Tim's answers to creative questions
+  qa_round.py editor  QA_DIR STAGE answers.json         record the editor's answers to creative questions
+                                                       (`tim` still works as an old name)
   qa_round.py status  QA_DIR                            one line per stage (reports, unattended logs, F-07)
   qa_round.py check   findings.json                     validate a findings file only
 
-QA_DIR: <shoot>/_shotlog/qa/<concept>/ (small text only). Files: <stage>-r<N>.json, tim-answers.json, qa-log.md.
+QA_DIR: <shoot>/_shotlog/qa/<concept>/ (small text only). Files: <stage>-r<N>.json, editor-answers.json, qa-log.md.
+(Older jobs have tim-answers.json or approver-answers.json: still read, merged into editor-answers.json on the next write.)
 Save raw agent outputs elsewhere (e.g. QA_DIR/raw/), not as <stage>-r*.json.
 
 findings.json (what qa-manager returns):
   {"stage": "aroll|broll|grade|subtitles|final", "round": 1, "timeline": "C3 v2",
    "checked": ["B-01 gate PASS", ...],            every checklist id must appear in checked or not_checked
-   "not_checked": ["B-05: no stills, Tim in Resolve"],
+   "not_checked": ["B-05: no stills, editor in Resolve"],
    "findings": [{"id": "B-03-1", "kind": "hard|judgement|creative", "severity": "fix|check",
                  "where": "R4 0331, 00:00:12:05", "rule": "broll-rulebook 4 / B-03",
                  "evidence": "shake_check p90 2.4 px", "fix": "slide / Gyroflow / slow (shake)"}]}
 verdicts.json (what qa-verifier returns):
   {"verdicts": [{"id": "B-20-1", "agree": true, "reason": "...", "reclassify": "creative"?}]}
-answers.json (Tim's answers, written by the editor from what Tim said):
-  {"answers": [{"id": "B-41-1", "answer": "keep Jay on camera", "tim_said": "his words"}]}
+answers.json (the editor's answers, written by Claude from what the editor said):
+  {"answers": [{"id": "B-41-1", "answer": "keep Jay on camera", "editor_said": "their words"}]}
+  (old files may say "tim_said": read the same way)
 
 Verdicts:
-  SHADOW    QA isn't calibrated on Tim's finals yet (references/calibration.md): everything is reported to
-            Tim, nothing is forced (Q25)
+  SHADOW    QA isn't calibrated yet (references/calibration.md): everything is reported to the editor,
+            nothing is forced (Q25)
   VERIFY    judgement findings wait for the qa-verifier before anything else is decided
   FAIL      something to fix; fix it, then a fresh qa-manager runs the next round
-  ESCALATE  round 3 (or later) still has something to fix: stop, show Tim (unattended: log, move on, report)
+  ESCALATE  round 3 (or later) still has something to fix: stop, show the editor (unattended: log, move on, report)
   PARTIAL   nothing to fix in what was checked, but some checks couldn't run: never report as passed
-  PASS      nothing to fix; creative questions still open are listed (the stage waits on Tim for those)
+  PASS      nothing to fix; creative questions still open are listed (the stage waits on the editor for those)
 Rules (Tim's answers, Q9-Q13):
   hard       a written rule broken, measured: always fixed, no need to ask (severity check: reported only)
   judgement  needs the qa-verifier's independent agreement, whatever its severity; only agreed ones count
-  creative   taste (story, lines, joke on camera, music, Tim's placements, swapping a subject): never
-             auto-fixed, never blocks the technical result, goes to Tim
+  creative   taste (story, lines, joke on camera, music, the editor's placements, swapping a subject): never
+             auto-fixed, never blocks the technical result, goes to the editor
 """
 import json, os, re, sys
 
 STAGES = ("aroll", "broll", "grade", "subtitles", "final")
 KINDS = ("hard", "judgement", "creative")
 MAX_ROUNDS = 3
+ANSWERS = "editor-answers.json"
+OLD_ANSWERS = ("tim-answers.json", "approver-answers.json")   # written by older versions; read, never written
 HERE = os.path.dirname(os.path.abspath(__file__))
 REFS = os.path.join(HERE, "..", "references")
 
@@ -121,9 +126,19 @@ def rounds_of(qa_dir, stage):
     return sorted(int(m.group(1)) for n in os.listdir(qa_dir) for m in [pat.match(n)] if m)
 
 
-def tim_answers(qa_dir, stage):
-    p = os.path.join(qa_dir, "tim-answers.json")
-    return (load(p).get(stage) or {}) if os.path.exists(p) else {}
+def all_answers(qa_dir):
+    """Every stage's answers: the old files first, editor-answers.json last (it wins)."""
+    out = {}
+    for n in OLD_ANSWERS + (ANSWERS,):
+        p = os.path.join(qa_dir, n)
+        if os.path.exists(p):
+            for st, ans in (load(p) or {}).items():
+                out.setdefault(st, {}).update(ans or {})
+    return out
+
+
+def editor_answers(qa_dir, stage):
+    return all_answers(qa_dir).get(stage) or {}
 
 
 def counts(f):
@@ -139,7 +154,7 @@ def plan(qa_dir, d):
     """Return (verdict, lines) for the next step of this stage."""
     stage, rnd = d["stage"], d["round"]
     live = calibrated()
-    answers = tim_answers(qa_dir, stage)
+    answers = editor_answers(qa_dir, stage)
     fs = [f for f in d["findings"] if not f.get("dropped")]
     creative = [f for f in fs if f["kind"] == "creative"]
     ask = [f for f in creative if f["id"] not in answers]
@@ -165,11 +180,11 @@ def plan(qa_dir, d):
         verdict = "PARTIAL" if d.get("not_checked") else "PASS"
     head = f"{stage} round {rnd}: {verdict}"
     if ask:
-        head += f" ({len(ask)} question{'s' if len(ask) > 1 else ''} for Tim)"
+        head += f" ({len(ask)} question{'s' if len(ask) > 1 else ''} for the editor)"
     lines.append(head)
     if not live:
-        lines.append("QA isn't calibrated on Tim's finals yet (references/calibration.md): report every finding "
-                     "to Tim with the edit; nothing is forced. Fix one only if Tim says so.")
+        lines.append("QA isn't calibrated yet (references/calibration.md): report every finding "
+                     "to the editor with the edit; nothing is forced. Fix one only if the editor says so.")
         for f in fs:
             if f["kind"] != "creative":
                 lines.append(f"  REPORT {f['id']} [{f['kind']}/{f.get('severity', 'fix')}] {f['where']}: "
@@ -179,33 +194,33 @@ def plan(qa_dir, d):
             lines.append(f"VERIFY first: run a fresh qa-verifier on " + ", ".join(f["id"] for f in unverified)
                          + f", then: qa_round.py verify QA_DIR {stage} {rnd} verdicts.json")
         for f in to_fix:
-            tag = "ESCALATE to Tim" if verdict == "ESCALATE" else "FIX"
+            tag = "ESCALATE to editor" if verdict == "ESCALATE" else "FIX"
             lines.append(f"  {tag} {f['id']} [{f['kind']}] {f['where']}: {f['evidence']} -> {f['fix']} ({f['rule']})")
         for f in notes:
-            allow = " (fix only if cheap and clearly right)" if f["kind"] == "hard" else " (verified; fix only if Tim agrees)"
+            allow = " (fix only if cheap and clearly right)" if f["kind"] == "hard" else " (verified; fix only if the editor agrees)"
             lines.append(f"  NOTE {f['id']} [{f['kind']}/check] {f['where']}: {f['evidence']}{allow}")
     for f in ask:
-        lines.append(f"  ASK TIM {f['id']} [creative] {f['where']}: {f['evidence']} (suggestion: {f['fix']})")
+        lines.append(f"  ASK EDITOR {f['id']} [creative] {f['where']}: {f['evidence']} (suggestion: {f['fix']})")
     for f in settled:
-        lines.append(f"  SETTLED {f['id']}: Tim said {answers[f['id']].get('answer', '')!r}")
+        lines.append(f"  SETTLED {f['id']}: the editor said {answers[f['id']].get('answer', '')!r}")
     for f in [f for f in d["findings"] if f.get("dropped")]:
         lines.append(f"  DROPPED {f['id']}: the verifier disagreed ({f.get('verifier_reason', '')})")
     if d.get("not_checked"):
         lines.append("  NOT CHECKED: " + "; ".join(str(x) for x in d["not_checked"]))
     nxt = {
-        "SHADOW": "next: put the report in front of Tim; continue only as he says",
+        "SHADOW": "next: put the report in front of the editor; continue only as they say",
         "VERIFY": "next: the verifier decides the judgement findings, then this prints the real verdict",
         "FAIL": f"next: fix, then run a fresh qa-manager as round {rnd + 1} (same stage)",
-        "ESCALATE": "next: stop fixing this stage. Show Tim what's still failing, the evidence and what was tried "
+        "ESCALATE": "next: stop fixing this stage. Show the editor what's still failing, the evidence and what was tried "
                     "(unattended: it's in qa-log.md; move on and put it at the top of the end-of-run report)",
         "PARTIAL": "next: nothing to fix in what was checked, but some checks couldn't run (above). Run them in a "
-                   "new round when possible, or tell Tim exactly what wasn't checked; never report it as passed",
+                   "new round when possible, or tell the editor exactly what wasn't checked; never report it as passed",
         "PASS": "next: stage passed; continue to the next stage",
     }[verdict]
     lines.append(nxt)
     if ask and verdict in ("PASS", "PARTIAL", "FAIL", "ESCALATE"):
-        lines.append("  the creative questions go to Tim (one batch, pop-up questions); record his answers with: "
-                     f"qa_round.py tim QA_DIR {stage} answers.json")
+        lines.append("  the creative questions go to the editor (one batch, pop-up questions); record the answers with: "
+                     f"qa_round.py editor QA_DIR {stage} answers.json")
     return verdict, lines
 
 
@@ -219,6 +234,9 @@ def log(qa_dir, d, verdict, lines, what):
 def main():
     argv = [a for a in sys.argv[1:] if a != "--extra"]
     extra = "--extra" in sys.argv
+    if argv[:1] in (["-h"], ["--help"]):
+        print(__doc__)
+        return
     if len(argv) < 2:
         sys.exit(__doc__)
     cmd = argv[0]
@@ -253,8 +271,8 @@ def main():
         if rnd > 1 and not os.path.exists(rpath(qa_dir, stage, rnd - 1)):
             sys.exit(f"round {rnd - 1} of {stage} was never recorded")
         if rnd > MAX_ROUNDS and not extra:
-            sys.exit(f"{stage} already had {MAX_ROUNDS} rounds: escalate to Tim. "
-                     "Record another round only if Tim asked for it (--extra).")
+            sys.exit(f"{stage} already had {MAX_ROUNDS} rounds: escalate to the editor. "
+                     "Record another round only if the editor asked for it (--extra).")
         prev_p = rpath(qa_dir, stage, rnd - 1)
         if rnd > 1 and os.path.exists(prev_p):        # the same finding id, already confirmed: no second verify
             confirmed = {f["id"]: f for f in load(prev_p)["findings"]
@@ -278,7 +296,7 @@ def main():
                 continue
             f["verifier_reason"] = v.get("reason", "")
             if v.get("reclassify") == "creative":
-                f["kind"] = "creative"                # taste, not a mistake: it goes to Tim, never dropped
+                f["kind"] = "creative"                # taste, not a mistake: it goes to the editor, never dropped
                 f["reclassified_by_verifier"] = True
             else:
                 f["verified"] = bool(v.get("agree"))
@@ -289,10 +307,10 @@ def main():
             print("no verdict yet for: " + ", ".join(missing))
         save(out, d)
         what = "qa-verifier"
-    elif cmd == "tim":
+    elif cmd in ("editor", "tim"):
         stage, afile = argv[2], argv[3]
-        p = os.path.join(qa_dir, "tim-answers.json")
-        allans = load(p) if os.path.exists(p) else {}
+        p = os.path.join(qa_dir, ANSWERS)
+        allans = all_answers(qa_dir)                  # carries old tim-/approver-answers.json over
         for a in load(afile).get("answers", []):
             allans.setdefault(stage, {})[a["id"]] = {k: v for k, v in a.items() if k != "id"}
         save(p, allans)
@@ -301,7 +319,7 @@ def main():
             print("answers saved; no round recorded for this stage yet")
             return
         d = load(rpath(qa_dir, stage, rs[-1]))
-        what = "Tim's answers"
+        what = "the editor's answers"
     else:
         sys.exit(__doc__)
     verdict, lines = plan(qa_dir, d)

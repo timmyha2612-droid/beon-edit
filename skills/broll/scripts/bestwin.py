@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Pick the steadiest source window for a B-roll slot from the gyro cache (no decoding, instant).
-usage: bestwin.py GYRO_DIR CLIP REC_SECONDS [--speed 48] [--lo 1.0] [--hi -1.0] [--k 3] [--avoid 6.0-8.5,...]
+usage: bestwin.py GYRO_DIR CLIP REC_SECONDS [--speed 100] [--lo 1.0] [--hi -1.0] [--k 3] [--avoid 6.0-8.5,...]
   GYRO_DIR  cache from shotlog/scripts/ingest.py (gyro/<CLIP>.json: win = [[t, shake, speed], ...])
-  CLIP      file stem, e.g. C1087
-  REC_SECONDS  how long the shot plays on the timeline; at --speed 48 it uses 0.48 x that of source
+  CLIP      file stem, e.g. C1087 (a file name or a path relative to the shoot, A001/C1087.MP4, works too)
+  REC_SECONDS  how long the shot plays on the timeline; --speed (default 100) is the playback speed,
+               e.g. at --speed 48 it uses 0.48 x that of source
+Gyro windows exist only for clips with a gyro track (Sony rtmd); other cameras report "no gyro" and
+need a motion card or broll_auto.py instead.
   --lo/--hi    usable source range (default: skip the first and last 1 s; --hi negative = from the end)
   --avoid      source ranges already used in this series (shot log usage) - never overlapped
 Ranks windows by mean shake (deg/s, RMS of gyro minus its 0.4 s average), then max, and prints the
@@ -11,16 +14,23 @@ top --k non-overlapping candidates with tier (pass < 0.35, check 0.35-0.6, fix >
 the camera speed is (cv of speed: > 0.3 = the move speeds up or slows down inside the shot).
 Then render a motion card on the winner before placing it (gyro can't see focus pulls or resets)."""
 import argparse, json, os
-import numpy as np
 
-ap = argparse.ArgumentParser()
+ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 ap.add_argument("gyro"); ap.add_argument("clip"); ap.add_argument("rec", type=float)
 ap.add_argument("--speed", type=float, default=100); ap.add_argument("--lo", type=float, default=1.0)
 ap.add_argument("--hi", type=float, default=-1.0); ap.add_argument("--k", type=int, default=3)
 ap.add_argument("--avoid", default="")
 a = ap.parse_args()
-j = json.load(open(os.path.join(a.gyro, "gyro", a.clip + ".json")) if os.path.isdir(os.path.join(a.gyro, "gyro"))
-              else open(os.path.join(a.gyro, a.clip + ".json")))
+import numpy as np
+b = os.path.basename(a.clip)
+if os.path.splitext(b)[1].lower() in (".mp4", ".mov", ".mxf", ".m4v", ".mts", ".avi", ".mkv"):
+    b = os.path.splitext(b)[0]
+a.clip = b                                               # ingest.py keys the cache by file stem
+gp = os.path.join(a.gyro, "gyro", a.clip + ".json") if os.path.isdir(os.path.join(a.gyro, "gyro")) \
+    else os.path.join(a.gyro, a.clip + ".json")
+if not os.path.exists(gp):
+    raise SystemExit(f"{a.clip}: no gyro cache at {gp} (run shotlog/scripts/ingest.py first)")
+j = json.load(open(gp))
 if "win" not in j:
     raise SystemExit(f"{a.clip}: {j.get('err', 'no gyro windows')}")
 Wn = np.array(j["win"], float)

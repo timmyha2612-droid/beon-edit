@@ -1,24 +1,57 @@
 #!/usr/bin/env python3
-"""One-pass, resumable shoot ingest for the device VM: probe, gyro shake, keyframes, contact sheets.
-usage: ingest.py SHOOT_DIR CACHE_DIR SHEET_DIR [--budget 160] [--workers 4] [--per-sheet 8]
-  SHOOT_DIR  connected folder with the camera cards (searched recursively for .MP4/.MOV)
-  CACHE_DIR  VM scratch (outside mnt/), e.g. ~/work/<shoot>  - probe.json, gyro/*.json, fr/*.jpg
-  SHEET_DIR  non-Dropbox connected folder for the sheets you stage and look at
-Each device_bash call is a fresh shell (background jobs die when it returns) with a ~180 s limit,
-so the script stops itself at --budget seconds and you simply run it again until it prints DONE.
+"""One-pass, resumable shoot ingest: probe, gyro shake, keyframes, contact sheets, camera facts.
+usage: ingest.py SHOOT_DIR CACHE_DIR SHEET_DIR [--budget S] [--workers 4] [--per-sheet 8]
+  SHOOT_DIR  folder with the camera cards (searched recursively for .MP4/.MOV)
+  CACHE_DIR  scratch, e.g. <scratch_root>/<client>-<shoot>/ingest - probe.json, gyro/*.json, fr/*.jpg,
+             cameras_suggested.json
+  SHEET_DIR  folder for the sheets you look at (never in a synced folder: editor.json synced_folders, Dropbox)
+Budget: locally (editor.json run_env.mode "local", the default) there is none, it runs to the end.
+If run_env is device-vm, each device_bash call is a fresh shell (background jobs die when it returns)
+with a ~180 s limit, so the script stops itself at --budget seconds (default run_env.shell_budget_s
+minus 20, else 160) and you simply run it again until it prints DONE. The VM usually has no
+editor.json, so pass --budget from the Mac's editor.json; with no setup file on a non-Mac it uses 160.
+--budget always wins.
 Already-finished work is skipped. 4K long-GOP decodes and 2 kHz Sony gyro are the slow parts:
 frames run in a 4-way pool, gyro is binned per frame (shake = RMS of per-frame gyro minus a 0.4 s
 moving average, deg/s, per 1 s window every 0.5 s), clips over 5 GB skip gyro (8-min tripod
-interviews blew the 3 GB VM memory). Needs ffmpeg, numpy, opencv, telemetry_parser (pip)."""
-import argparse, glob, json, os, subprocess, sys, time
+interviews blew the 3 GB VM memory).
+cameras_suggested.json: per card folder fps, res, codec, ext, name pattern, model and log profile
+(Sony XML sidecar), gyro found. Suggestions only: Claude confirms them with the editor and writes
+shotlog.json > shoot.cameras, never overwriting a field already set.
+Needs ffmpeg, numpy, opencv, telemetry_parser (pip)."""
+import argparse, glob, json, os, pathlib, re, subprocess, sys, time
 from concurrent.futures import ThreadPoolExecutor
-import numpy as np
 
-ap = argparse.ArgumentParser()
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "house-rules" / "scripts"))
+try:
+    import beon_config as bc
+except ImportError:                       # plugin copy without house-rules: behave as before
+    bc = None
+
+ap = argparse.ArgumentParser(description=__doc__.split("\n")[0], epilog=__doc__,
+                             formatter_class=argparse.RawDescriptionHelpFormatter)
 ap.add_argument("shoot"); ap.add_argument("cache"); ap.add_argument("sheets")
-ap.add_argument("--budget", type=float, default=160); ap.add_argument("--workers", type=int, default=4)
+ap.add_argument("--budget", type=float, default=None,
+                help="stop after this many seconds (default: none locally; device-vm: shell budget)")
+ap.add_argument("--workers", type=int, default=4)
 ap.add_argument("--per-sheet", type=int, default=8)
 a = ap.parse_args()
+ED = bc.load_editor() if bc else {}
+RUN = ED.get("run_env") or {}
+# Inside the VM the Mac's editor.json is usually absent: no setup file and not a Mac = assume the VM.
+NO_SETUP = not bc or not any((bc.HOME / n).exists() for n in ("editor.json", "config.json"))
+if a.budget is None:
+    if NO_SETUP and sys.platform != "darwin":
+        a.budget = 160.0
+    elif RUN.get("mode") == "device-vm":
+        a.budget = max(30.0, float(RUN["shell_budget_s"]) - 20) if RUN.get("shell_budget_s") else 160.0
+    else:
+        a.budget = float("inf")
+if bc:
+    for d in (a.cache, a.sheets):
+        if bc.in_synced_folder(d, ED):
+            raise SystemExit(f"refusing {d!r}: frames and sheets never go in a synced folder (editor.json synced_folders, Dropbox)")
+import numpy as np
 T0 = time.time()
 left = lambda: a.budget - (time.time() - T0)
 for d in (a.cache, f"{a.cache}/gyro", f"{a.cache}/fr", a.sheets):
@@ -41,7 +74,8 @@ def do_probe(f):
     n, d = (v.get("r_frame_rate") or "0/1").split("/")
     return key(f), {"file": f, "dur": round(float(fmt.get("duration", 0)), 2), "fps": float(n) / max(1, float(d)),
                     "wh": f'{v.get("width")}x{v.get("height")}', "created": tags.get("creation_time"), "tc": tc,
-                    "bytes": os.path.getsize(f), "audio_ch": [s.get("channels") for s in j.get("streams", []) if s["codec_type"] == "audio"]}
+                    "bytes": os.path.getsize(f), "audio_ch": [s.get("channels") for s in j.get("streams", []) if s["codec_type"] == "audio"],
+                    "codec": v.get("codec_name"), "model": tags.get("com.apple.quicktime.model") or tags.get("model")}
 todo = [f for f in files if key(f) not in probe]
 with ThreadPoolExecutor(a.workers) as ex:
     for k, v in ex.map(do_probe, todo):
@@ -92,7 +126,42 @@ for f in files:
     if not os.path.exists(f"{a.cache}/gyro/{key(f)}.json"):
         do_gyro(f)
 
-# 4. sheets (8 clips per sheet, label: name, duration, fps, shake, created)
+# 4. camera facts per card folder -> cameras_suggested.json (suggestions; never written to the shot log)
+def sony_xml(f):
+    """model and log profile from the Sony sidecar (C0001M01.XML next to C0001.MP4), if there is one."""
+    st = os.path.splitext(f)[0]
+    for x in (st + "M01.XML", st + "M01.xml"):
+        if os.path.exists(x):
+            t = open(x, errors="ignore").read(200000)
+            m = re.search(r'modelName="([^"]+)"', t); g = re.search(r'CaptureGammaEquation" value="([^"]+)"', t)
+            return (m.group(1) if m else None), (g.group(1) if g else None)
+    return None, None
+cams = {}
+for f in files:
+    rel = os.path.relpath(f, a.shoot); folder = rel.split(os.sep)[0] if os.sep in rel else "."
+    cams.setdefault(folder, []).append(f)
+sugg = []
+for folder, fs in sorted(cams.items()):
+    pr = [probe[key(f)] for f in fs if key(f) in probe]
+    if not pr:
+        continue
+    common = lambda vals: max(set(vals), key=vals.count) if vals else None
+    stems = [key(f) for f in fs]; pre = os.path.commonprefix(stems)
+    model, log = sony_xml(fs[0])
+    gy = [json.load(open(f"{a.cache}/gyro/{key(f)}.json")) for f in fs if os.path.exists(f"{a.cache}/gyro/{key(f)}.json")]
+    fps = common([round(p["fps"], 3) for p in pr])
+    sugg.append({"folder": folder, "clips": len(fs), "fps": int(fps) if fps and fps == int(fps) else fps,
+                 "res": common([p["wh"] for p in pr]), "codec": common([p.get("codec") for p in pr]),
+                 "ext": common([os.path.splitext(f)[1] for f in fs]),
+                 "name_pattern": (pre + "*") if pre else None,
+                 "model": model or common([p.get("model") for p in pr if p.get("model")]), "log": log,
+                 "gyro_found": (any("err" not in g for g in gy) if gy else None),
+                 "audio_ch": common([tuple(p.get("audio_ch") or []) for p in pr])})
+json.dump({"shoot_dir": os.path.abspath(a.shoot), "note": "suggestions for shotlog.json > shoot.cameras; confirm role, "
+           "gyro (sony-rtmd | none) and log with the editor; never overwrite a set field", "cameras": sugg},
+          open(f"{a.cache}/cameras_suggested.json", "w"), indent=1)
+
+# 5. sheets (8 clips per sheet, label: name, duration, fps, shake, created)
 import cv2
 done_all = all(os.path.exists(f"{a.cache}/fr/{key(f)}_0.9.jpg") and os.path.exists(f"{a.cache}/gyro/{key(f)}.json") for f in files)
 if done_all or left() > 10:

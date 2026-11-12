@@ -24,14 +24,14 @@ What it does
   File Path ends with /<FP path> (or its fp.clip metadata equals the FP path). Never by clip name.
   ffprobe: creation_time and duration per file (timeout per file). Online-only files are not probed,
   so nothing downloads.
-  Rerun state: settled, moved_by_tim, missing or new (see SKILL.md step 3). The shot log's
+  Rerun state: settled, moved_by_editor, missing or new (see SKILL.md step 3). The shot log's
   sort_copy.bin is relative to the shoot bin, so a renamed shoot bin does not break it.
   Roles: aroll (>= 60 s, locked or steady, speech-like audio), multicam_angle (another camera that
   overlaps an aroll clip by >= 30 s), audio (no video), junk_candidate (< 1.5 s, dark and silent, or
   reject with 0 selects), broll (the rest). The audio scan only runs on aroll and dark candidates.
 
 Output: manifest.json (contract in SKILL.md). Prints a short summary. Writes only --out, and refuses a
-path inside Dropbox or _shotlog."""
+path inside Dropbox, editor.json synced_folders or _shotlog."""
 import argparse, os, re, subprocess, sys
 from concurrent.futures import ThreadPoolExecutor
 
@@ -133,7 +133,7 @@ def shotlog_index(path):
 
 
 def rerun_state(row, log, copies, shoot_bin):
-    """settled | moved_by_tim | new, and where the clip is now. Tim always wins.
+    """settled | moved_by_editor | new, and where the clip is now. The editor always wins.
     Bins are compared relative to the shoot bin, so a renamed shoot bin keeps its clips settled."""
     sort = log.get("sort") or {}
     current = sort.get("v") == sl.SORT_V
@@ -141,11 +141,11 @@ def rerun_state(row, log, copies, shoot_bin):
     rel_here = [sl.rel_bin(f, shoot_bin) for f in here]
     want = (log.get("sort_copy") or {}).get("bin")          # the copy's bin, relative to the shoot bin
     if copies:
-        return ("moved_by_tim", here) if want is not None and want not in rel_here else ("settled", here)
-    if want is not None:                                      # Tim deleted the copy
-        return "moved_by_tim", here
+        return ("moved_by_editor", here) if want is not None and want not in rel_here else ("settled", here)
+    if want is not None:                                      # the editor deleted the copy
+        return "moved_by_editor", here
     if sort and log.get("bin") and sl.rel_bin(log["bin"], shoot_bin) != rel_here[0]:
-        return "moved_by_tim", here                           # an older sort that moved the clip itself
+        return "moved_by_editor", here                        # an older sort that moved the clip itself
     if current and (sort.get("approved") or sort.get("archive_only")):
         return "settled", here                                # a reject or unsure clip: archive only, no copy
     return "new", here
@@ -225,7 +225,7 @@ def main():
                       "fps": pr.get("fps") or r["fps"] or (fr or {}).get("fps"), "recorded_at": rec,
                       "camera": (fr or {}).get("camera") or r["camera"] or None,
                       "fp": fp_block(fr, sel_by.get(fr["path"], []), set(sl.CLEAN_DROP)) if fr else None,
-                      "state": state, "now_in": here if state == "moved_by_tim" else None,
+                      "state": state, "now_in": here if state == "moved_by_editor" else None,
                       "copies": copies.get(k, []), "probe_error": pr.get("error"),
                       "video": pr.get("video", True), "role": None, "audio": None, "excluded_reason": None})
 

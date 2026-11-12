@@ -6,15 +6,18 @@ don't count, e.g. this concept's own older versions), run, read the result.
 Tim, Hired Home Nov S2 C4 (11 Nov 2026): "some a roll is overlapping or already used in concept 2". Concepts from
 one shoot share clips, so before cutting the A-roll (aroll-cut section 1) and before handing over, check every
 A-roll and B-roll range against the project's other timelines. An overlapping A-roll take (same words, same
-take) is never reused without Tim's yes; ask which versions count (a superseded, never-delivered version may
-not). A B-roll clip used elsewhere is reported (same window = reuse, other window = same shot, Tim's call).
+take) is never reused without the editor's yes; ask which versions count (a superseded, never-delivered version
+may not; the job card Timelines line lists the ones that don't count). A B-roll clip used elsewhere is reported
+(same window = reuse, other window = same shot, the editor's call).
 
 Matching is by File Path (clip names repeat across shoots), in seconds of source time.
 result = {"<other timeline>": [[track, clip, my_in, my_out, my_item, their_item, their_in, their_out, verdict]]}
 verdict: "overlap N.Ns" (same source time) or "same clip, other window"."""
-NAME = "Concept timeline name"
+# Runs inside Resolve (no beon_config): fill these from the job card before running.
+NAME = "Concept timeline name"   # job card Timelines line: the working timeline
 PLANNED = []          # optional: [["C0173.MP4", in_s, out_s, "label"], ...] matched by clip name inside the same shoot folder
-SKIP = []             # optional: timeline names to ignore (this concept's own versions are skipped automatically)
+SKIP = []             # optional: timeline names to ignore: the job card Timelines "don't count for reuse" names
+                      # (this concept's own versions are skipped automatically)
 A_ROLL_ONLY = False   # True: only V1 of this timeline
 
 proj = resolve.GetProjectManager().GetCurrentProject()

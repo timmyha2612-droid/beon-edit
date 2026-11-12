@@ -5,6 +5,8 @@
 import json
 import sys
 
+if len(sys.argv) < 3 or sys.argv[1] in ("-h", "--help"):
+    sys.exit(__doc__)
 d = json.load(open(sys.argv[1].rstrip("/") + "/words.json"))
 for name in sys.argv[2:]:
     key = [k for k in d if k.startswith(name)][0]

@@ -5,8 +5,9 @@ Import it from a script in the same folder:
     import _sortlib as sl
 
 What is here:
-- guard_scratch(path): refuse to write inside Dropbox or a shot log folder, symlinks resolved.
-  Every scratch output goes through it.
+- guard_scratch(path): refuse to write inside Dropbox, a synced folder (editor.json synced_folders)
+  or a shot log folder, symlinks resolved. Every scratch output goes through it.
+- editor_changes(sort): the editor's changes from a clip's sort block, old `tim` key included.
 - read_json / write_json: small JSON io. write_json is atomic (temp file, then rename) and guarded.
 - load_fp(paths, key): read saved Footage Prep MCP output (clips or selects), one or more pages.
 - connect(project): reach the running Resolve from an external python, refuse a different project.
@@ -18,8 +19,14 @@ What is here:
 - now_iso() and parse_time(text) for ISO times.
 
 Stdlib only (plus ffprobe on PATH)."""
-import csv, io, json, math, os, subprocess, sys, tempfile
+import csv, io, json, math, os, pathlib, subprocess, sys, tempfile
 from datetime import datetime, timezone
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "house-rules" / "scripts"))
+try:
+    import beon_config as bc
+except ImportError:                       # plugin copy without house-rules: Dropbox and _shotlog guard only
+    bc = None
 
 SORT_V = "0.3"                 # sort block version in the shot log
 SORT_COPY_KEY = "beon.sort_copy"  # third-party metadata set on every copy in a sorted bin
@@ -30,14 +37,23 @@ CLEAN_DROP = ("shaky", "whip", "motion_blur", "blocked")  # select flags that ma
 
 # ---------- paths and json ----------
 def guard_scratch(path):
-    """Return the absolute path, or exit if it points into Dropbox or a _shotlog folder.
-    Symlinks are resolved first (realpath), so a link in scratch that points into Dropbox is refused too."""
+    """Return the absolute path, or exit if it points into Dropbox, a synced folder (editor.json
+    synced_folders) or a _shotlog folder. Symlinks are resolved first (realpath), so a link in scratch
+    that points into Dropbox is refused too."""
     p = os.path.abspath(os.path.expanduser(str(path)))
     for q in (p, os.path.realpath(p)):
         for bad in REFUSE:
             if bad in q:
                 raise SystemExit(f"refusing to write {q!r}: scratch output never goes in Dropbox or _shotlog")
+    if bc and bc.in_synced_folder(p):
+        raise SystemExit(f"refusing to write {p!r}: scratch output never goes in a synced folder (editor.json synced_folders)")
     return p
+
+
+def editor_changes(sort):
+    """The editor's changes in a clip's sort block: `editor_changes`, plus the old `tim` list of older logs."""
+    sort = sort or {}
+    return list(sort.get("editor_changes") or []) + [c for c in (sort.get("tim") or []) if c not in (sort.get("editor_changes") or [])]
 
 
 def read_json(path, default=None):

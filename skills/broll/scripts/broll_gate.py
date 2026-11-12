@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""B-roll gate: must print PASS before a B-roll pass is reported to Tim (references/broll-rulebook.md).
+"""B-roll gate: must print PASS before a B-roll pass is reported to the editor (references/broll-rulebook.md).
 usage: python3 broll_gate.py --project "The Hired Home" --timeline "November Shoot 2 Concept 2" \
-           --plan plan.json[,plan2.json] [--allow "B7,R3"] [--holds-ok "120-260,900-1010"]
+           --plan plan.json[,plan2.json] [--allow "B7,R3"] [--holds-ok "120-260,900-1010"] [--card JOB_CARD.md]
 
 Per shot (every ENABLED camera clip above V1 that isn't on a speaker track; titles, nested timelines,
 compound clips and stills are skipped):
@@ -10,18 +10,22 @@ compound clips and stills are skipped):
            people talking 80%, people moving 60%, others 48%, 100 fps clips 25%
   retime   slowed shots: Optical Flow (Nearest only at 96%)
   gyro     stabilised (a Gyroflow render) or Orange-flagged waiting for gyroflow_headless.py; a camera file
-           with no gyro track (no rtmd) is listed for Tim instead of failing; plan `gyro_skip` = Tim's reason
+           with no gyro track (no Sony rtmd, e.g. other camera bodies) is listed for the editor instead of
+           failing; plan `gyro_skip` = the editor's reason. Gyroflow not installed (editor.json
+           tools.gyroflow.installed: false, or --no-gyroflow): each unstabilised shot must be slowed for a
+           valid reason, camera-still (plan `still`), or marked (plan `gyro_skip`); otherwise replace it
   zoom     peak (Resolve zoom x Dynamic Zoom) vs the pixelation limits: UHD fine 1.25 / fail 1.4,
            1080-high fine 1.0 / fail 1.15 (stabilised clips: the Gyroflow crop is extra, check a still)
   static   static shots need their Dynamic Zoom applied (plan dynamic_zoom.applied = true)
 Whole timeline:
   speaker  the speaker never stays on screen more than 4 s at a time (V1 or a track named angle/cam/a-roll
-           showing on top), except --holds-ok ranges (Tim's jokes, the first introduction)
+           showing on top), except --holds-ok ranges (jokes the editor kept on camera, the first introduction)
   slivers  nothing shows for under 1 s (24 frames at 24p) between two other shots, checked per timeline item
            (never merged), so B-roll ending 1-2 frames before an A-roll cut is caught; no gaps
 Reasons are read from the plan rows (`why`, from broll_auto.py) matched by slot (first word of the clip
 name). A stabilised clip on the Gyroflow track takes the reason of the disabled original under it.
---allow    shot names Tim approved as exceptions (e.g. a shot he wants as it is)."""
+--allow    shot names the editor approved as exceptions (e.g. a shot they want as it is).
+--card     job card: warns when the timeline fps differs from the delivery fps (the timeline's own fps is used)."""
 import argparse, json, re, subprocess
 
 FLOORS = {"talking": 80.0, "moving": 60.0}
@@ -36,12 +40,12 @@ def zoom_tier(peak, height):
     return "ok" if peak <= fine + 1e-6 else ("check" if peak <= fail + 1e-6 else "fail")
 
 
-def check_shot(shot, row, allow):
+def check_shot(shot, row, allow, gyroflow=True):
     """shot: dict(name, speed, retime ('optical_flow'|'nearest'|other|None), stabilised, colour, has_gyro,
     zoom, height, fps). row: plan row or None. Returns (problems, pending, notes)."""
     probs, pending, notes = [], [], []
     if shot["name"] in allow:
-        return [], [], ["allowed by Tim"]
+        return [], [], ["allowed by the editor"]
     why = (row or {}).get("why") or {}
     spd = shot["speed"]
     if spd >= 99.5:
@@ -60,10 +64,15 @@ def check_shot(shot, row, allow):
         if shot["retime"] != "optical_flow":
             probs.append("slowed but retime is not Optical Flow")
     if not shot["stabilised"] and not (row or {}).get("gyro_skip"):
-        if shot["colour"] == "Orange":
+        if not gyroflow:
+            if not shot["has_gyro"]:
+                notes.append("no gyro data: list for the editor")
+            elif not (spd < 99.5 and (why.get("speed_reason") in REASONS)) and not (row or {}).get("still"):
+                probs.append("Gyroflow not installed: slow it (shake), replace it, or mark it (plan gyro_skip)")
+        elif shot["colour"] == "Orange":
             pending.append("Orange: run gyroflow_headless.py")
         elif not shot["has_gyro"]:
-            notes.append("no gyro data: list for Tim")
+            notes.append("no gyro data: list for the editor")
         else:
             probs.append("not stabilised (flag Orange + gyroflow marker)")
     dz = (row or {}).get("dynamic_zoom")
@@ -144,7 +153,7 @@ def check_timeline(runs, fps, holds_ok):
             probs.append(f"gap/black {a}-{b} ({b - a} frames)")
             continue
         if spk and b - a > limit and not any(h0 <= a and b <= h1 for h0, h1 in holds_ok):
-            probs.append(f"speaker on screen {(b - a) / fps:.1f} s at {a}-{b} (max 4 s; cover it, or Tim allows it)")
+            probs.append(f"speaker on screen {(b - a) / fps:.1f} s at {a}-{b} (max 4 s; cover it, or the editor allows it)")
     return probs
 
 
@@ -155,8 +164,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--project", required=True); ap.add_argument("--timeline", required=True)
     ap.add_argument("--plan", default=""); ap.add_argument("--allow", default="")
-    ap.add_argument("--holds-ok", default="", help="timeline frame ranges (from timeline start) Tim allows over 4 s")
+    ap.add_argument("--holds-ok", default="", help="timeline frame ranges (from timeline start) the editor allows over 4 s")
+    ap.add_argument("--card", help="job card (delivery fps check)")
+    ap.add_argument("--no-gyroflow", action="store_true",
+                    help="Gyroflow not installed (default: editor.json tools.gyroflow.installed)")
     a = ap.parse_args()
+    from _beon import bc, gyroflow_installed
+    has_gf = gyroflow_installed() and not a.no_gyroflow
     allow = {s.strip() for s in a.allow.split(",") if s.strip()}
     holds = [tuple(int(x) for x in r.split("-")) for r in a.holds_ok.split(",") if r.strip()]
     plan = {}
@@ -166,6 +180,10 @@ def main():
     resolve, pj, tl = connect(a.project, a.timeline)
     OF = getattr(resolve, "RETIME_OPTICAL_FLOW", 3); NEAR = getattr(resolve, "RETIME_NEAREST", 1)
     fps = float(tl.GetSetting("timelineFrameRate") or 24)
+    if a.card:
+        want = float(bc.delivery(a.card).get("fps") or fps)
+        if abs(want - fps) > 0.01:
+            print(f"note: timeline is {fps:g} fps, job card delivery says {want:g} fps")
     t0 = tl.GetStartFrame()
     probe = {}
 
@@ -173,13 +191,20 @@ def main():
         if path not in probe:
             out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=codec_tag_string,height,r_frame_rate",
                                   "-of", "json", path], capture_output=True, text=True).stdout
-            j = json.loads(out or "{}")
-            h, f, g = 2160, 50.0, False
+            try:
+                j = json.loads(out or "{}")
+            except ValueError:
+                j = {}
+            h, f, g = 2160, 50.0, False                     # g: Sony rtmd gyro track; other bodies: none
             for s in j.get("streams", []):
                 if s.get("codec_tag_string") == "rtmd":
                     g = True
                 if s.get("height"):
-                    h = int(s["height"]); n, d = s["r_frame_rate"].split("/"); f = float(n) / float(d)
+                    h = int(s["height"])
+                    try:
+                        n, d = s.get("r_frame_rate", "50/1").split("/"); f = float(n) / float(d)
+                    except (ValueError, ZeroDivisionError):
+                        pass
             probe[path] = (h, f, g)
         return probe[path]
 
@@ -215,7 +240,7 @@ def main():
                     retime="optical_flow" if rp == OF else ("nearest" if rp == NEAR else None),
                     stabilised=stab, colour=it.GetClipColor(), has_gyro=g,
                     zoom=float(it.GetProperty("ZoomX") or 1.0), height=h, fps=f)
-        probs, pend, notes = check_shot(shot, plan.get(slot), allow)
+        probs, pend, notes = check_shot(shot, plan.get(slot), allow, has_gf)
         if any(n.startswith("no gyro") for n in notes):
             nogyro.append(name)
         fails += bool(probs); pending += bool(pend)
@@ -228,7 +253,7 @@ def main():
     for p in tl_probs:
         print("timeline:", p)
     if nogyro:
-        print("no gyro data (list for Tim):", ", ".join(nogyro))
+        print("no gyro data (list for the editor):", ", ".join(nogyro))
     fails += len(tl_probs)
     print("PASS" if not fails and not pending else f"FAIL ({fails} to fix, {pending} waiting for Gyroflow / Dynamic Zoom)")
 

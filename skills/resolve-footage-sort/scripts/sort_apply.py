@@ -15,7 +15,7 @@ once, clip names ending in the camera clip number, no copy of a clip marked arch
 
 Bin layout: the shoot bin is the archive. Originals and rejects stay at its root under their own names.
 The numbered bins are created inside it. Renaming the shoot bin (to `00 Archive - All Footage`) is not
-possible from script; Tim does it by hand after the run, then the next inventory takes the new --bin.
+possible from script; the editor does it by hand after the run, then the next inventory takes the new --bin.
 
 What --apply does, in order:
   1. Makes the numbered bins inside the shoot bin (one at a time, checked by name first).
@@ -41,7 +41,7 @@ the existing copy is only topped up (name, missing markers, keywords).
 --limit N only does the first N copies (tests).
 
 Never: CreateEmptyTimeline, SetSetting, project or timeline switches, clip colours. The open project
-must be plan.project. Tim's current bin is restored at the end, also after errors.
+must be plan.project. The editor's current bin is restored at the end, also after errors.
 Plan contract (plan.json): {project, shoot_bin, axis, archive:{rename_to}, bins:[{name, parent}],
 copies:[{key, uid, bin, clip_name}], shotlog_updates:{<key>:{...}}}.
 """
@@ -199,12 +199,15 @@ def write_shotlog(path, plan, verified, approve_archive):
             if k in NO_UPDATE_KEYS:
                 continue
             if k == "sort" and isinstance(v, dict):
+                old = sl.editor_changes(e.get("sort"))      # the plan adds to the editor's changes, never drops them
                 e.setdefault("sort", {}).update(v)
+                e["sort"]["editor_changes"] = old + [c for c in sl.editor_changes(e["sort"]) if c not in old]
             else:
                 e[k] = v
         s = e.setdefault("sort", {})
         s.update({"v": sl.SORT_V, "axis": plan.get("axis") or s.get("axis"), "at": s.get("at") or today})
-        s.setdefault("tim", [])
+        s["editor_changes"] = sl.editor_changes(s)     # older logs: the `tim` list moves here
+        s.pop("tim", None)
         if key in verified:
             e["bin"] = verified[key]["bin"]
             e["sort_copy"] = {"bin": verified[key]["rel"], "uid": verified[key]["uid"]}
@@ -291,8 +294,8 @@ def main():
 
     resolve, pj, mp = sl.connect(plan["project"])
     shoot = sl.find_folder(mp, shoot_parts)
-    tim_folder = mp.GetCurrentFolder()
-    tim_id = tim_folder.GetUniqueId() if tim_folder else None
+    ed_folder = mp.GetCurrentFolder()
+    ed_id = ed_folder.GetUniqueId() if ed_folder else None
     print(f"{mode}: {pj.GetName()} / {full(shoot_parts)}, {len(copies)} copies into {len(set(c['bin'] for c in copies))} bins")
 
     problems, verified = [], {}
@@ -395,8 +398,8 @@ def main():
                     problems.append(f"{c['clip_name']}: ORIGINAL changed (markers/keywords {before[c['key']]} -> {now})")
             print(f"verify: {len(verified)}/{len(copies)} copies ok, originals checked")
     finally:
-        # DeleteFolders and SetCurrentFolder move the current bin: put Tim's back (shoot bin if it's gone)
-        if not (tim_folder and mp.SetCurrentFolder(tim_folder) and mp.GetCurrentFolder().GetUniqueId() == tim_id):
+        # DeleteFolders and SetCurrentFolder move the current bin: put the editor's back (shoot bin if it's gone)
+        if not (ed_folder and mp.SetCurrentFolder(ed_folder) and mp.GetCurrentFolder().GetUniqueId() == ed_id):
             mp.SetCurrentFolder(sl.find_folder(mp, shoot_parts, required=False) or mp.GetRootFolder())
         print(f"current bin restored: {mp.GetCurrentFolder().GetName()}")
 
@@ -409,7 +412,7 @@ def main():
             print(f"shotlog: would update {len(plan.get('shotlog_updates', {}))} clips in {a.shotlog}")
     rename = (plan.get("archive") or {}).get("rename_to")
     if rename:
-        print(f"archive rename: Tim renames {full(shoot_parts)} to {rename!r} by hand (no Folder rename in the API),"
+        print(f"archive rename: the editor renames {full(shoot_parts)} to {rename!r} by hand (no Folder rename in the API),"
               " then the next inventory takes the new --bin")
 
     for p in problems:

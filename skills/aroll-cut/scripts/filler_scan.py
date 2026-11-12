@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """List likely ums, uhs, stutters and false starts inside the A-roll pieces you plan to use.
-usage: filler_scan.py TRANSCRIPT.json AUDIO.wav [A-B ...]
+usage: filler_scan.py TRANSCRIPT.json AUDIO.wav [A-B ...] [--lang en | --shoot FOLDER | --card JOB.md]
 TRANSCRIPT.json: word-timed transcript, either Resolve's MediaPoolItem.GetTranscription(True)
   saved as {"fps": 25, "start_tc": "07:34:33:03", "segments": [{"words": [{"start": tc, "end": tc,
   "text": ..}]}]} (the shot-log transcripts/ format), or {"words": [{"start": s, "end": s, "text": ..}]}
@@ -16,11 +16,50 @@ Transcripts usually DROP fillers, so the scan also looks at the audio:
 UNTRANS lines carry a steadiness check: an "uh"/"um" is one held, voiced vowel or hum, so its
 spectral centroid barely moves (variation < 0.3), while short real words with consonants vary 0.4-1.0
 (calibrated on Arriva Oct C1, Azar). It only works on short isolated sounds, not on whole phrases.
-Each line gives the source time to look at. Check before cutting and keep the speech flowing."""
-import json, re, sys, wave
-import numpy as np
+Each line gives the source time to look at. Check before cutting and keep the speech flowing.
+Filler words follow the language: --lang, else shoot.language (--shoot, or the job card's Shoot line),
+else the client profile's language, else English. Only English has a list so far: add one to
+FILLERS_BY_LANG when a job in another language comes up."""
+import argparse, json, pathlib, re, sys, wave
+try:
+    import numpy as np
+except ImportError:          # --help and the word lists work without it; the scan needs it
+    np = None
+try:
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "house-rules" / "scripts"))
+    import beon_config as bc
+except ImportError:          # copied somewhere without the plugin (e.g. a VM): English defaults
+    bc = None
 
-FILLERS = {"um", "uh", "uhm", "umm", "uhh", "er", "erm", "ah", "eh", "hmm", "mm", "mhm"}
+FILLERS_BY_LANG = {
+    "en": {"um", "uh", "uhm", "umm", "uhh", "er", "erm", "ah", "eh", "hmm", "mm", "mhm"},
+}
+FILLERS = FILLERS_BY_LANG["en"]
+
+
+def fillers_for(lang):
+    """Filler words for a language code ("en", "en-AU"); English when there is no list for it."""
+    code = (lang or "en").lower().split("-")[0].split("_")[0]
+    return FILLERS_BY_LANG.get(code, FILLERS_BY_LANG["en"])
+
+
+def job_language(lang=None, shoot=None, card=None):
+    """--lang < job card / shoot / client profile, in that order of preference; default "en"."""
+    if lang:
+        return lang
+    if bc is None:
+        return "en"
+    c = bc.load_card(card) if card else {}
+    sh = bc.load_shoot(shoot or c.get("Shoot"))
+    if sh.get("language"):
+        return sh["language"]
+    slug = sh.get("client") or c.get("Client")
+    return (bc.load_client(slug).get("language") if slug else None) or "en"
+
+
+def need_numpy():
+    if np is None:
+        sys.exit("needs numpy (pip install numpy, or run it with the python that has it)")
 
 def tc_s(tc, fps):
     h, m, s, f = [int(x) for x in tc.split(":")]
@@ -73,15 +112,23 @@ def norm(t):
     return re.sub(r"[^a-z0-9']", "", t.lower())
 
 def main():
-    words = load_words(sys.argv[1]); x, sr = load_audio(sys.argv[2]); fr = energy(x, sr)
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("transcript"); ap.add_argument("wav"); ap.add_argument("ranges", nargs="*", help="A-B source seconds")
+    ap.add_argument("--lang", help="language code for the filler list (default: shoot / client / en)")
+    ap.add_argument("--shoot", help="shoot folder: reads shoot.language")
+    ap.add_argument("--card", help="job card: reads its Shoot and Client lines")
+    a = ap.parse_args()
+    need_numpy()
+    fillers = fillers_for(job_language(a.lang, a.shoot, a.card))
+    words = load_words(a.transcript); x, sr = load_audio(a.wav); fr = energy(x, sr)
     thr = np.percentile(fr, 10) + 12; sp = fr > thr
-    rng = [tuple(float(v) for v in r.split("-")) for r in sys.argv[3:]] or [(0, len(fr) / 100)]
+    rng = [tuple(float(v) for v in r.split("-")) for r in a.ranges] or [(0, len(fr) / 100)]
     hits = []
     for a, b in rng:
         ws = [w for w in words if w[1] >= a - 0.3 and w[0] <= b + 0.3]   # every word touching the range
         for i, (s, e, t) in enumerate(ws):
             n = norm(t)
-            if n in FILLERS:
+            if n in fillers:
                 hits.append((s, "FILLER", f"'{t}' {s:.2f}-{e:.2f}"))
             d = e - s
             if (d > 0.55 and len(n) <= 4) or d > 0.9:
@@ -112,6 +159,4 @@ def main():
         print("no candidates found")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        sys.exit(__doc__)
     main()

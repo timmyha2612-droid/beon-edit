@@ -1,6 +1,33 @@
+---
+slug: arriva
+name: Arriva
+who: Apartment building in Strathfield; resident testimonials, meet the team, reasons to rent
+people:
+  - {name: Azar, role: "team member (Meet the Team, Oct C1)"}
+  - {name: Amrita, role: "resident (testimonial, C2)"}
+  - {name: Sid, role: resident (testimonial)}
+  - {name: Lili-Jo, role: "presenter (5 Reasons to Rent, Oct C3)"}
+  - {name: Liam, role: "crew, A cam (FX3)"}
+  - {name: Rahul, role: "crew, camera with handheld mic"}
+concept_types:
+  - {name: meet the team, target_length: "about 60 s"}
+  - {name: 5 reasons to rent, target_length: "30 s or less"}
+  - {name: testimonial, target_length: ask}
+footage: {path_pattern: "{root}/Arriva/{Month}/", write_protected: false}
+resolve: {project: Arriva, bins: "one bin per month (e.g. October)", timeline_naming: ask}
+delivery: {aspect: "9:16", resolution: 1080x1920, fps: 24, loudness_lufs: ask, true_peak_db: ask}
+end_card: {kind: ask, asset: ask, length_f: ask, music_tail_s: ask}
+audio: {dialogue_enhance: ask, music: editor}
+subtitles: {look: ask, title: ask, font: ask, reference_timeline: ask}
+grade: {template_still: "Tim's Color Grading Node Tree #1_1", aroll_policy: per_concept}
+language: en
+brand_words: ["arriva (lowercase)", "arriva.com.au", "Ariba -> arriva (speech-to-text fix)"]
+open_questions: ["End card or logo at the end of every Arriva reel, and which file?", "Captions or on-screen text beyond the C3 reason cards?", "Loudness target?", "B-roll speeds: does Arriva keep the old people 50-60% / hero 48% habit?"]
+---
+
 # Arriva style profile
 
-Tags: [Tim] confirmed by Tim · [inferred] measured from his finals, not confirmed · ask = unknown.
+Tags: [Tim] or [<editor>] said or confirmed by that editor · [inferred] measured from finished edits, not confirmed · ask = unknown.
 Sources: Oct C1 "Meet the Team: Azar" and Oct C3 "5 Reasons to Rent" (Claude's first cut and Tim's answers, 15 Oct 2026); Tim's grades read from C2 Amrita, Sep C3 and C4. Details: project docs "Arriva Oct C1 C3 edit notes", "Tim colour grading lessons".
 
 ## Client and footage
@@ -14,9 +41,9 @@ Sources: Oct C1 "Meet the Team: Azar" and Oct C3 "5 Reasons to Rent" (Claude's f
 - Length by concept: Meet the Team about 60 s; 5 Reasons to Rent 30 s or less. [Tim, Oct C1/C3]
 
 ## Structure
-- Meet the Team: the first answer (name and role) as voice-over over the opening B-roll, then a gap for Tim's logo mask reveal, then the answers. [Tim, Oct C1]
+- Meet the Team: the first answer (name and role) as voice-over over the opening B-roll, then a gap for the editor's logo mask reveal, then the answers. [Tim, Oct C1]
 - 5 Reasons to Rent: one take per scripted line, a text card per reason, light real-time inserts, a handheld feel; end overlay "Find your next home at arriva.com.au". [Tim, Oct C3]
-- Logo and text: Tim does them; leave a gap and a marker. [Tim]
+- Logo and text: the editor does them (job card Stages); leave a gap and a marker. [Tim]
 
 ## A-roll
 - Interviews: create the multicam first, audio from the A cam (the mic, clearer sound); cut the A cam and use B at the joins. [Tim, Oct C1]
@@ -26,14 +53,14 @@ Sources: Oct C1 "Meet the Team: Azar" and Oct C3 "5 Reasons to Rent" (Claude's f
 - Questions cut. [Tim, Oct C1]
 
 ## B-roll
-- Speeds: 100% unless there's a valid reason to slow (general rule, Tim 9 Nov 2026). Was "people 50-60% (Oct C1 55%), facade and hero shots 48%" [Tim, Oct C1]: hero shots can still breathe (reason `hero`); ask Tim whether Arriva keeps the rest. Shaky shots go through Gyroflow. [Tim]
+- Speeds: 100% unless there's a valid reason to slow (general rule, Tim 9 Nov 2026). Was "people 50-60% (Oct C1 55%), facade and hero shots 48%" [Tim, Oct C1]: hero shots can still breathe (reason `hero`); ask the editor whether Arriva keeps the rest. Shaky shots go through Gyroflow. [Tim]
 - About 50-60% coverage on Meet the Team (Oct C1 first cut: 56%). [inferred]
 - C3-type concepts: light inserts at real speed only. [Tim, Oct C3]
 
 ## Audio and music
-- Liam's FX3 XLR setup records ch2 about 6 dB lower: on Azar (LIAM 0925) ch1 clips in every answer, ch2 never does. Cut and deliver from the clean channel and tell Tim. [measured, Oct C1]
+- Liam's FX3 XLR setup records ch2 about 6 dB lower: on Azar (LIAM 0925) ch1 clips in every answer, ch2 never does. Cut and deliver from the clean channel and tell the editor. [measured, Oct C1]
 - Rahul's camera with the handheld mic: voice on ch1 only, ch2 silent; map to mono or the voice plays left-only. [measured, Oct C3]
-- Music: Tim adds it. [Tim]
+- Music: the editor adds it (job card Stages). [Tim]
 - Loudness target: ask.
 
 ## Ending and brand
@@ -45,9 +72,10 @@ Sources: Oct C1 "Meet the Team: Azar" and Oct C3 "5 Reasons to Rent" (Claude's f
 ## Grade
 - Same 9-node tree; gallery still "Tim's Color Grading Node Tree #1_1" (it holds Temp 70 and HDR −1.00: reset to 0/0/0 before use). [inferred]
 - Unlike Namir, Tim moves the interview grade per concept: C2 Amrita 60 / +0.5 / −1.315 on A-roll and B-roll; Sep C3 A-roll −80 / −6.5 / −1.00; C4 A-roll −230 / 0 / −1.0 with B-roll −310 / +14 / −1.5 (Temp / Tint / HDR Global). [inferred]
-- Grading of Oct C1 and C3 is parked for Tim. [Tim]
+- Grading of Oct C1 and C3 is parked for the editor. [Tim]
 
-## Open questions for Tim
+## Open questions (mirrored in the front matter `open_questions`)
 - End card or logo at the end of every Arriva reel, and which file?
 - Captions or on-screen text beyond the C3 reason cards?
 - Loudness target?
+- B-roll speeds: does Arriva keep the old people 50-60% / hero 48% habit?

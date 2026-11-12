@@ -4,8 +4,11 @@ try:
     from compression import zstd
     def unz(b): return zstd.decompress(b)
 except Exception:
-    import zstandard
-    def unz(b): return zstandard.ZstdDecompressor().decompress(b, max_output_size=20_000_000)
+    try:
+        import zstandard
+        def unz(b): return zstandard.ZstdDecompressor().decompress(b, max_output_size=20_000_000)
+    except ImportError:
+        def unz(b): raise SystemExit("needs zstd: pip install zstandard (or Python 3.14+)")
 def varint(b,i):
     r=s=0
     while True:

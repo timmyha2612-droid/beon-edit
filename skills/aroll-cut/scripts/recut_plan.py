@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Plan an A-roll recut on a copy of a timeline and ripple everything else to match (offline, no Resolve).
-usage: recut_plan.py snapshot.json edits.json plan.json
+usage: recut_plan.py snapshot.json edits.json plan.json [--fps 24 | --card JOB.md]
 snapshot.json  from resolve_snapshot.py
 edits.json     {"copy": "Oct C1 no-uh (Claude test)", "aroll": "video1",
                 "replace": [{"old": [i, j], "new": [[ss, se], ...], "why": "..."}, ...]}
@@ -14,11 +14,22 @@ an A-roll join starts at the new join; one that sat in a gap keeps its distance 
 If a moved item now runs into the next item on its track it is shortened to meet it (reported).
 An edge that sat on an A-roll join (or within 3 frames of one) lands exactly on the new join, so B-roll
 never ends a frame or two before a cut after a recut (Tim, 11 Nov 2026: 1-frame speaker flash = glitch).
+Timeline fps: the snapshot's; if it has none, --fps, else the job card's delivery fps (--card), else 24.
 Writes plan.json for resolve_relay.py and prints a before/after table to check."""
-import json, math, sys
+import argparse, json, math, pathlib, sys
 
-snap, edits = json.load(open(sys.argv[1])), json.load(open(sys.argv[2]))
-TL_FPS = float(snap.get("fps") or 24)
+ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+ap.add_argument("snapshot"); ap.add_argument("edits"); ap.add_argument("plan")
+ap.add_argument("--fps", type=float, help="timeline fps when the snapshot has none")
+ap.add_argument("--card", help="job card: delivery fps when the snapshot has none")
+args = ap.parse_args()
+snap, edits = json.load(open(args.snapshot)), json.load(open(args.edits))
+fallback_fps = args.fps
+if not fallback_fps and args.card:
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "house-rules" / "scripts"))
+    import beon_config as bc
+    fallback_fps = bc.delivery(args.card)["fps"]
+TL_FPS = float(snap.get("fps") or fallback_fps or 24)
 T0 = snap["start"]
 AR = edits.get("aroll", "video1")
 A = sorted(snap["tracks"][AR]["items"], key=lambda r: r["s"])
@@ -141,5 +152,5 @@ for r in plan["items"]:
         print(f"  {r['track']} {r['name'][:28]:28s} {r['old_rec']:5d} -> {r['rec']:5d}  ({r['dur']} f)")
 for n in plan["notes"]:
     print("  !", n)
-json.dump(plan, open(sys.argv[3], "w"), indent=1)
-print("wrote", sys.argv[3])
+json.dump(plan, open(args.plan, "w"), indent=1)
+print("wrote", args.plan)

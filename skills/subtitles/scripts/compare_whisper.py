@@ -4,9 +4,19 @@ import glob
 import json
 import os
 import re
+import argparse
 import sys
 
-BASE = (sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/subs_work")).rstrip("/") + "/"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import subs_intake  # noqa: E402
+
+ap = argparse.ArgumentParser(description="Compare built captions (WORK/plans.json) with WORK/verify/<tag>.json.")
+ap.add_argument("work", nargs="?", help="work folder (default: from --card, else ~/subs_work)")
+ap.add_argument("--card", help="job card: work folder and fps from it")
+ap.add_argument("--fps", type=float, help="timeline fps (default: job card Delivery, else 24)")
+ARGS = ap.parse_args()
+BASE = (ARGS.work or subs_intake.work_dir(ARGS.card)).rstrip("/") + "/"
+FPS = ARGS.fps or subs_intake.delivery(ARGS.card).get("fps", 24)
 PLANS = json.load(open(BASE + "plans.json"))
 # Words I removed on purpose (clean verbatim / dropped reactions) - differences here are expected.
 IGNORABLE = {"like", "um", "uh", "you", "know", "i", "mean", "yeah", "yep", "yes", "right", "ok", "okay", "so",
@@ -31,7 +41,7 @@ def whisper_words(tag):
     words = []
     for seg in data["transcription"]:
         for tok in norm_tokens(seg["text"]):
-            words.append((tok, seg["offsets"]["from"] / 1000 * 24))
+            words.append((tok, seg["offsets"]["from"] / 1000 * FPS))
     return words
 
 

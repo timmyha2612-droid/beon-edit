@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 """Lessons inbox (Tim, 9 Nov 2026): every correction or piece of knowledge, written down the moment it's given,
-sorted into general / client / concept, and turned into rules only after Tim says yes.
+sorted into general / client / concept, and turned into rules only after the editor running the job says yes.
 
 usage:
   lessons.py add INBOX --said "their words" --kind general|client|concept|unsure --rule "the rule, one line"
-                 --who Tim [--stage broll] [--where "R4 0331"] [--client namir-mikha]
+                 --who <editor> [--stage broll] [--where "R4 0331"] [--client namir-mikha]
                  [--source said|inferred] [--evidence "numbers / what changed"] [--promote-from arriva,namir-mikha]
   lessons.py revise INBOX ID --file F --section S --change add|replace|remove --new-line "- ..." [--old-line "- ..."]
                  [--kind K] [--client C] [--rule R] [--remove-lines "profile: line" ...]
-                 the learner's proposal for a lesson: exactly what would change in the plugin (Tim approves THIS)
+                 the learner's proposal for a lesson: exactly what would change in the plugin (the editor approves THIS)
   lessons.py list INBOX [--status open]
-  lessons.py propose INBOX            the end-of-job table for Tim, built from the stored proposals
+  lessons.py propose INBOX            the end-of-job table for the editor, built from the stored proposals
   lessons.py decide INBOX ID approve|change|drop|kind=<general|client|concept> --by <who decided>
-                 [--rule "Tim's version"] [--note "..."] [--client name] [--reopen]
-  lessons.py applied INBOX ID --file skills/x/SKILL.md --commit abc123
+                 [--rule "the editor's version"] [--note "..."] [--client name] [--reopen]
+  lessons.py ship INBOX [--repo PATH] [--body-out FILE]
+                 prints the git / gh commands for the approved lessons: plugin owner -> commit + push to main;
+                 any other editor -> branch lessons/<editor>-<concept>-<date> + pull request (never main)
+  lessons.py applied INBOX ID --file skills/x/SKILL.md (--commit abc123 | --pr URL)
   lessons.py repeats PLUGIN_DIR        client rules that look alike across 2+ client profiles (Q17 candidates)
 
 INBOX: <shoot>/_shotlog/lessons/<concept>.jsonl (small text). The job card's `Lessons inbox:` line names it.
@@ -22,29 +25,76 @@ Kinds (Q6):
   general  applies to every client          -> a stage skill, the B-roll rulebook, a QA checklist, house-rules
   client   only this client                 -> client-styles/references/<client>.md
   concept  only this concept                -> the job card's concept-only notes + shot log; never the plugin
-  unsure   -> ask Tim which one before proposing
-Statuses: open -> approved / changed (Tim's wording) / dropped -> applied (in the plugin, with the commit).
-  pending-tim: someone who isn't Tim decided; it waits for Tim (Q1). Concept lessons go straight to `concept`.
-Only Tim turns a lesson into a rule (Q1, Q15). Tim's names: "Tim", "Tim Ha", or ~/.beon-edit/config.json "tim_names".
-A kind change sends a lesson back to open: Tim approves the new placement again.
+  unsure   -> ask the editor which one before proposing
+Statuses: open -> approved / changed (the editor's wording) / dropped -> in-pr (pull request open, waits for the
+  plugin owner's merge) -> applied (in the plugin, with the commit).
+  pending-approval: someone other than the editor running the job decided; it waits for the editor.
+  (Old inboxes say pending-tim: read as pending-approval and written back with the new name.)
+  Concept lessons go straight to `concept`.
+The editor running the job approves their lessons. "The editor" = ~/.beon-edit/editor.json name / aliases
+(skills/house-rules/references/intake.md). No editor.json yet: the old behaviour holds ("Tim", "Tim Ha" and
+config.json tim_names are the editor; owner if config.json exists), with a note to write editor.json. Plugin owner
+(editor.json plugin_owner: true) pushes approved general/client lessons to main; everyone else opens a pull request
+that changes nothing until the owner merges it. Plugin clone: editor.json plugin_repo.
+A kind change sends a lesson back to open: the editor approves the new placement again.
 """
-import argparse, datetime, json, os, re, sys
+import argparse, datetime, json, os, pathlib, re, sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "house-rules" / "scripts"))
+import beon_config as bc  # noqa: E402
 
 KINDS = ("general", "client", "concept", "unsure")
-CONFIG = os.path.expanduser("~/.beon-edit/config.json")
+OLD_STATUS = {"pending-tim": "pending-approval"}
+_ED = None
 
 
-def tim_names():
-    names = {"tim", "tim ha"}
-    try:
-        names |= {n.strip().lower() for n in json.load(open(CONFIG)).get("tim_names", [])}
-    except Exception:
-        pass
-    return names
+def editor():
+    global _ED
+    if _ED is None:
+        _ED = bc.load_editor()
+    return _ED
 
 
-def is_tim(name):
-    return " ".join((name or "").lower().split()) in tim_names()
+LEGACY_NAMES = {"tim", "tim ha"}                # before editor.json: Tim's machines answered to these
+
+
+def legacy():
+    """No editor.json yet: keep the old behaviour (Tim / Tim Ha + config.json tim_names; owner if config.json exists)."""
+    return not editor().get("exists")
+
+
+def is_editor(name):
+    """The editor running the job (this machine's editor.json), the only one whose yes approves a lesson."""
+    if not name:
+        return False
+    if legacy() and bc.norm_name(name) in LEGACY_NAMES:
+        return True
+    return bc.is_this_editor(name, editor())
+
+
+def is_owner():
+    if legacy():
+        return (bc.HOME / "config.json").exists()
+    return bc.is_plugin_owner(editor())
+
+
+def no_setup_note():
+    if legacy():
+        return " (no editor set up: write ~/.beon-edit/editor.json first, house-rules references/intake.md)"
+    return ""
+
+
+def editor_name():
+    """The editor's real name, or None when editor.json has none."""
+    if editor().get("name"):
+        return editor()["name"]
+    if legacy() and (bc.HOME / "config.json").exists():
+        return "Tim"
+    return None
+
+
+def editor_label():
+    return editor_name() or "the editor"
 
 
 def read(inbox):
@@ -56,9 +106,11 @@ def read(inbox):
             line = line.strip()
             if line:
                 try:
-                    out.append(json.loads(line))
+                    it = json.loads(line)
                 except json.JSONDecodeError as e:
                     sys.exit(f"{inbox} line {n} is not valid JSON: {e}")
+                it["status"] = OLD_STATUS.get(it.get("status"), it.get("status"))
+                out.append(it)
     return out
 
 
@@ -98,7 +150,7 @@ def target(it):
                                                                     "skills/house-rules/SKILL.md (or the stage skill)")
     if k == "concept":
         return "job card (Concept-only notes) + shot log lessons"
-    return "ask Tim which kind first"
+    return "ask the editor which kind first"
 
 
 def find(items, lid):
@@ -133,7 +185,7 @@ def cmd_add(a):
     if a.kind == "concept":
         print("  concept-only: also add it to the job card's 'Concept-only notes' (never into the plugin)")
     if a.kind == "unsure":
-        print("  unsure: ask Tim whether this is for every client, this client, or this concept only")
+        print("  unsure: ask the editor whether this is for every client, this client, or this concept only")
 
 
 def cmd_revise(a):
@@ -156,7 +208,7 @@ def cmd_revise(a):
         sys.exit("--old-line is required for replace and remove")
     it["proposal"] = dict(file=a.file, section=a.section, change=a.change, old_line=a.old_line,
                           new_line=one_line(a.new_line), remove_lines=a.remove_lines or [])
-    if it["status"] in ("approved", "changed", "pending-tim"):
+    if it["status"] in ("approved", "changed", "pending-approval", "in-pr"):
         history(it, by="learner", event=f"proposal revised after '{it['status']}': back to open")
         it["status"] = "open"
     write(a.inbox, items)
@@ -164,23 +216,34 @@ def cmd_revise(a):
 
 
 def cmd_list(a):
+    want = OLD_STATUS.get(a.status, a.status)
     for it in read(a.inbox):
-        if a.status and it["status"] != a.status:
+        if want and it["status"] != want:
             continue
         dec = it.get("decision") or {}
-        extra = f" ({dec.get('by')}: {dec.get('decision')})" if it["status"] == "pending-tim" else ""
-        print(f"{it['id']} {it['status']:<11}{extra} [{it['kind']}{'/' + it['client'] if it.get('client') else ''}] "
+        extra = f" ({dec.get('by')}: {dec.get('decision')})" if it["status"] == "pending-approval" else \
+            f" ({(it.get('pr') or {}).get('url')})" if it["status"] == "in-pr" else ""
+        print(f"{it['id']} {it['status']:<16}{extra} [{it['kind']}{'/' + it['client'] if it.get('client') else ''}] "
               f"{it['rule']}  ({it['who']}: \"{one_line(it['said'])[:80]}\")")
 
 
+def route(it):
+    if it["kind"] == "concept":
+        return "job card"
+    if it["kind"] == "unsure":
+        return "kind first"
+    return "push to main" if is_owner() else "pull request (owner merges)"
+
+
 def cmd_propose(a):
-    items = [it for it in read(a.inbox) if it["status"] in ("open", "pending-tim")]
+    items = [it for it in read(a.inbox) if it["status"] in ("open", "pending-approval")]
     if not items:
         print("nothing to propose")
         return
     ask = [it for it in items if it["kind"] == "unsure"]
     rules = [it for it in items if it["kind"] in ("general", "client")]
-    print("| # | Rule (exact line) | Kind | Goes to | Evidence | Source | Note |\n|---|---|---|---|---|---|---|")
+    print("| # | Rule (exact line) | Kind | Goes to | Route | Evidence | Source | Note |\n"
+          "|---|---|---|---|---|---|---|---|")
     for it in rules:
         p = it.get("proposal") or {}
         line = p.get("new_line") or it["rule"]
@@ -189,46 +252,51 @@ def cmd_propose(a):
         if p.get("change") == "remove":
             line = f"remove: {p.get('old_line')}"
         src = "repeated in client profiles" if it.get("promote_from") else \
-              "Tim said" if it.get("source") == "said" and is_tim(it["who"]) else \
-              ("inferred from Tim's edit" if it.get("source") == "inferred" else f"from {it['who']}")
+              f"{it['who']} said" if it.get("source") == "said" else f"inferred ({it['who']})"
         notes = []
         if not p:
             notes.append("no learner proposal yet")
         if it.get("promote_from"):
             notes.append("promotion from " + ", ".join(it["promote_from"])
                          + ("; removes: " + " / ".join(p.get("remove_lines") or []) if p.get("remove_lines") else ""))
-        if it["status"] == "pending-tim":
+        if it["status"] == "pending-approval":
             dec = it.get("decision") or {}
             notes.append(f"{dec.get('by')} said {dec.get('decision')}"
                          + (f" ({dec.get('note')})" if dec.get("note") else ""))
         print(f"| {it['id']} | {cell(line)} | {it['kind']}{' (' + it['client'] + ')' if it.get('client') else ''} | "
-              f"`{cell(target(it))}` | {cell(it.get('evidence') or it['said'])} | {cell(src)} | {cell('; '.join(notes))} |")
+              f"`{cell(target(it))}` | {route(it)} | {cell(it.get('evidence') or it['said'])} | {cell(src)} | "
+              f"{cell('; '.join(notes))} |")
     for it in ask:
         print(f"\nASK which kind: {it['id']} \"{it['rule']}\" (every client / this client / this concept only?)")
+    how = "commit + push to main" if is_owner() else "a pull request that changes nothing until the plugin owner merges it"
     print(f"\n{len(rules)} to approve, change or drop; {len(ask)} need a kind first. "
-          "Nothing goes into the plugin without Tim's yes.")
+          f"Nothing goes into the plugin without {editor_label()}'s yes; approved rules go in as {how}."
+          + no_setup_note())
 
 
 def cmd_decide(a):
     items = read(a.inbox)
     it = find(items, a.id)
-    by_tim = is_tim(a.by)
+    by_editor = is_editor(a.by)
     if it["status"] == "applied" and not a.reopen:
         sys.exit(f"{a.id} is already applied ({(it.get('applied') or {}).get('commit')}); pass --reopen to change it")
     prev = it.get("decision") or {}
-    if not by_tim and prev and is_tim(prev.get("by")):
-        sys.exit(f"{a.id} was decided by Tim ({prev.get('decision')}); only Tim can change that")
+    if not by_editor and prev and is_editor(prev.get("by")):
+        sys.exit(f"{a.id} was decided by {prev.get('by')} ({prev.get('decision')}), the editor running the job; "
+                 "only they can change that")
+    wait = (f"waits for {editor_name()}, the editor running the job" if editor_name()
+            else "waits for the editor running the job") + no_setup_note()
     if a.decision.startswith("kind="):
         k = a.decision.split("=", 1)[1]
         if k not in KINDS[:3]:
             sys.exit("kind must be general, client or concept")
         if k == "client" and not (a.client or it.get("client")):
             sys.exit("--client is required when making it a client lesson")
-        if not by_tim:
-            it["status"] = "pending-tim"
+        if not by_editor:
+            it["status"] = "pending-approval"
             it["decision"] = dict(by=a.by, at=now(), decision=f"kind={k}", note=a.note, client=a.client)
             history(it, **it["decision"])
-            print(f"{it['id']} -> pending-tim ({a.by} suggests {k}; only Tim decides)")
+            print(f"{it['id']} -> pending-approval ({a.by} suggests {k}; {wait})")
         else:
             history(it, by=a.by, event=f"kind {it['kind']} -> {k}")
             it["kind"] = k
@@ -240,20 +308,20 @@ def cmd_decide(a):
             it["status"] = "concept" if k == "concept" else "open"
             it.pop("decision", None)
             print(f"{it['id']} is now {k} -> {target(it)}"
-                  + ("" if k == "concept" else " (open again: propose its exact line, then Tim approves)"))
+                  + ("" if k == "concept" else " (open again: propose its exact line, then the editor approves)"))
     else:
         if it["kind"] == "unsure":
-            sys.exit("ask Tim which kind first (decide ID kind=general|client|concept)")
+            sys.exit("ask the editor which kind first (decide ID kind=general|client|concept)")
         if it["kind"] == "concept":
             sys.exit("concept lessons never go into the plugin")
         if a.decision == "change" and not a.rule:
-            sys.exit("change needs --rule with Tim's version")
+            sys.exit("change needs --rule with the editor's version")
         dec = dict(by=a.by, at=now(), decision=a.decision, note=a.note, rule=a.rule)
         history(it, **dec)
         it["decision"] = dec
-        if not by_tim:
-            it["status"] = "pending-tim"
-            print(f"{it['id']} -> pending-tim ({a.by}: {a.decision}; only Tim turns it into a rule)")
+        if not by_editor:
+            it["status"] = "pending-approval"
+            print(f"{it['id']} -> pending-approval ({a.by}: {a.decision}; {wait})")
         else:
             if a.decision == "change":
                 it["rule_before"] = it["rule"]
@@ -261,17 +329,93 @@ def cmd_decide(a):
                 if it.get("proposal"):
                     it["proposal"]["new_line"] = one_line(a.rule)
             it["status"] = {"approve": "approved", "change": "changed", "drop": "dropped"}[a.decision]
-            print(f"{it['id']} -> {it['status']}")
+            it.pop("pr", None)
+            print(f"{it['id']} -> {it['status']}"
+                  + (f" (goes in as {route(it)})" if it["status"] != "dropped" else ""))
     write(a.inbox, items)
+
+
+def slug(s):
+    return re.sub(r"[^a-z0-9]+", "-", (s or "").lower()).strip("-") or "editor"
+
+
+def cmd_ship(a):
+    """Print (never run) the commands that put the approved lessons into the plugin."""
+    items = read(a.inbox)
+    ready = [it for it in items if it["status"] in ("approved", "changed") and it["kind"] in ("general", "client")]
+    dropped = [it for it in items if it["status"] == "dropped"]
+    concept = os.path.splitext(os.path.basename(a.inbox))[0]
+    repo = os.path.expanduser(a.repo or editor().get("plugin_repo") or "~/code/beon-edit")
+    day = datetime.date.today().isoformat()
+    if not ready:
+        print("nothing approved to ship (lessons.py list INBOX --status approved / changed)")
+        return
+    if not os.path.isdir(os.path.join(repo, ".git")):
+        print(f"WARNING: {repo} is not a git clone; set plugin_repo in ~/.beon-edit/editor.json")
+    ids = ", ".join(it["id"] for it in ready)
+    msg = f"Learn from {concept}: {ready[0]['rule'][:60]}" + (f" (+{len(ready) - 1} more)" if len(ready) > 1 else "")
+    body = [f"Lessons from {concept}, approved by {editor_label()} ({day}). Changes nothing until the plugin owner merges.",
+            "", "| # | Rule | Kind | File | Who / evidence |", "|---|---|---|---|---|"]
+    for it in ready:
+        p = it.get("proposal") or {}
+        body.append(f"| {it['id']} | {cell(p.get('new_line') or it['rule'])} | {it['kind']} | `{cell(target(it))}` | "
+                    f"{cell(it['who'])}: {cell(it.get('evidence') or it['said'])} |")
+    if dropped:
+        body += ["", "Dropped by the editor (listed so the owner can overrule):"]
+        body += [f"- {it['id']} {it['rule']}" for it in dropped]
+    body_txt = "\n".join(body) + "\n"
+    q = lambda s: "'" + s.replace("'", "'\\''") + "'"
+    print(f"# {len(ready)} lesson(s): {ids}   plugin clone: {repo}")
+    if is_owner():
+        print("# plugin owner: commit + push to main (apply-rules.md 'Plugin owner')")
+        print(f"git -C {q(repo)} switch main && git -C {q(repo)} pull --ff-only")
+        print("# ... make exactly the stored proposals, bump versions, changelog line, show the diff ...")
+        print(f"git -C {q(repo)} pull --ff-only")
+        print(f"git -C {q(repo)} add -A && git -C {q(repo)} commit -m {q(msg)}")
+        print(f"git -C {q(repo)} push origin main")
+        print(f"# then for each: lessons.py applied {a.inbox} <id> --file <path> --commit <sha>")
+        return
+    if not editor_name():
+        sys.exit("no editor name for the branch: write ~/.beon-edit/editor.json (name) first, "
+                 "house-rules references/intake.md")
+    branch = f"lessons/{slug(editor_name())}-{slug(concept)}-{day}"
+    body_file = a.body_out or os.path.join(os.path.dirname(os.path.abspath(a.inbox)), f"{concept}-pr.md")
+    with open(body_file, "w", encoding="utf-8") as f:
+        f.write(body_txt)
+    print("# not the plugin owner: branch + pull request, never main (apply-rules.md 'Other editors')")
+    print(f"git -C {q(repo)} fetch origin")
+    print(f"git -C {q(repo)} switch -c {q(branch)} origin/main")
+    print("# ... make exactly the stored proposals (no version bump, no changelog: the owner does those on merge) ...")
+    print(f"git -C {q(repo)} add -A && git -C {q(repo)} commit -m {q(msg)}")
+    print(f"git -C {q(repo)} push -u origin {q(branch)}")
+    print("# push refused (no write access): fork once, then push the branch to the fork")
+    print(f"#   (cd {q(repo)} && gh repo fork --remote --remote-name fork) && git -C {q(repo)} push -u fork {q(branch)}")
+    print(f"(cd {q(repo)} && gh pr create --base main --head {q(branch)} --title {q(msg)} --body-file {q(body_file)})")
+    print(f"#   from a fork: --head <your-github-user>:{branch}")
+    print(f"git -C {q(repo)} switch main")
+    print(f"# then for each: lessons.py applied {a.inbox} <id> --file <path> --pr <url>")
+    print(f"# PR body written to {body_file}")
 
 
 def cmd_applied(a):
     items = read(a.inbox)
     it = find(items, a.id)
-    if it["status"] not in ("approved", "changed"):
-        sys.exit(f"{a.id} is {it['status']}: only lessons Tim approved or changed can be applied")
-    if not is_tim((it.get("decision") or {}).get("by")):
-        sys.exit(f"{a.id} wasn't approved by Tim")
+    if it["status"] not in ("approved", "changed", "in-pr"):
+        sys.exit(f"{a.id} is {it['status']}: only lessons the editor approved or changed can be applied")
+    if not (it.get("decision") or {}).get("by"):
+        sys.exit(f"{a.id} has no recorded decision")
+    if a.pr:
+        it["status"] = "in-pr"
+        it["pr"] = dict(url=a.pr, file=a.file, at=now())
+        history(it, by="apply", event=f"pull request {a.pr} ({a.file})")
+        write(a.inbox, items)
+        print(f"{a.id} in-pr: {a.pr} (changes nothing until the plugin owner merges; then --commit <merge sha>)")
+        return
+    if not a.commit:
+        sys.exit("pass --commit <sha> (pushed to main / merged) or --pr <url> (pull request opened)")
+    if it["status"] != "in-pr" and not is_owner():
+        sys.exit(f"{a.id}: only the plugin owner pushes to main. Open a pull request (lessons.py ship), record it "
+                 "with --pr <url>, and pass --commit once it is merged")
     it["status"] = "applied"
     it["applied"] = dict(file=a.file, commit=a.commit, at=now())
     history(it, by="apply", event=f"applied in {a.file} ({a.commit})")
@@ -284,7 +428,7 @@ STOP = set("a an the and or of to in on at for with is are be it its as by from 
 
 
 def words(line):
-    line = re.sub(r"\[(Tim|inferred)[^\]]*\]|\([^)]*20\d\d[^)]*\)", " ", line)
+    line = re.sub(r"\[(?:Tim|inferred)[^\]]*\]|\[[^\]]*\b20\d\d\b[^\]]*\]|\([^)]*20\d\d[^)]*\)", " ", line)
     return {w for w in re.sub(r"[^a-z0-9%.]+", " ", line.lower()).split() if w not in STOP and len(w) > 1}
 
 
@@ -315,7 +459,7 @@ def cmd_repeats(a):
                         hits += 1
                         print(f"{j:.2f}\n  {p}: {la}\n  {q}: {lb}")
     print(f"{hits} candidate pair(s). The learner agent judges them: same rule, no counter-example in another "
-          "profile -> add it as a general lesson with --promote-from (Tim decides).")
+          "profile -> add it as a general lesson with --promote-from (the editor decides).")
 
 
 def main():
@@ -324,7 +468,7 @@ def main():
     p = sp.add_parser("add"); p.add_argument("inbox")
     p.add_argument("--said", required=True); p.add_argument("--rule", required=True)
     p.add_argument("--kind", required=True, choices=KINDS)
-    p.add_argument("--who", required=True, help="who said it (Tim, or the editor on the job card)")
+    p.add_argument("--who", required=True, help="who said it (the editor on the job card, or who taught it)")
     p.add_argument("--stage"); p.add_argument("--where"); p.add_argument("--client")
     p.add_argument("--source", default="said", choices=("said", "inferred")); p.add_argument("--evidence")
     p.add_argument("--promote-from")
@@ -339,8 +483,11 @@ def main():
     p = sp.add_parser("decide"); p.add_argument("inbox"); p.add_argument("id"); p.add_argument("decision")
     p.add_argument("--rule"); p.add_argument("--by", required=True, help="who decided: the editor named on the job card")
     p.add_argument("--note"); p.add_argument("--client"); p.add_argument("--reopen", action="store_true")
+    p = sp.add_parser("ship"); p.add_argument("inbox")
+    p.add_argument("--repo", help="plugin clone (default: editor.json plugin_repo)")
+    p.add_argument("--body-out", help="write the pull request body here")
     p = sp.add_parser("applied"); p.add_argument("inbox"); p.add_argument("id")
-    p.add_argument("--file", required=True); p.add_argument("--commit", required=True)
+    p.add_argument("--file", required=True); p.add_argument("--commit"); p.add_argument("--pr")
     p = sp.add_parser("repeats"); p.add_argument("plugin_dir"); p.add_argument("--min-overlap", type=float, default=0.5)
     a = ap.parse_args()
     if a.cmd == "decide" and not (a.decision in ("approve", "change", "drop") or a.decision.startswith("kind=")):
@@ -348,7 +495,7 @@ def main():
     if a.cmd == "revise" and a.change != "remove" and not one_line(a.new_line):
         sys.exit("--new-line is required for add and replace")
     {"add": cmd_add, "revise": cmd_revise, "list": cmd_list, "propose": cmd_propose, "decide": cmd_decide,
-     "applied": cmd_applied, "repeats": cmd_repeats}[a.cmd](a)
+     "ship": cmd_ship, "applied": cmd_applied, "repeats": cmd_repeats}[a.cmd](a)
 
 
 if __name__ == "__main__":

@@ -1,16 +1,27 @@
 """Edge-frame mouth check for people B-roll.
-usage: mouth_check.py CLIP T_IN DUR_S [real|slow]  -> JSON line
+usage: mouth_check.py CLIP T_IN DUR_S [real|slow] --dir SHOOT [--prefix LIAM.A_FX3_]  -> JSON line
+  CLIP     stem (C0123), file name (any video extension) or path relative to --dir (A001/C0123.MP4);
+           a stem is searched for under --dir, also as <prefix><stem> or <anything>_<stem>
+  --dir    the shoot folder (shot log "shoot.shoot_folder"); --prefix the camera's file-name prefix
+           (shot log shoot.cameras[].name_pattern without the *)
 Checks the first/last 0.3 s of the shot (what lands on the cut). Mouth-open ratio
 MAR = inner-lip gap / mouth width per face (Haar face -> FaceMesh on the crop).
 MAR > 0.35 = mouth wide open. If an edge fails, tries nudging the whole window
 by up to +-0.5 s in 2-frame steps and reports the smallest clean shift."""
-import sys, os, json, subprocess, numpy as np, cv2
+import argparse, os, json, subprocess
+from _beon import find_clip
+ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+ap.add_argument("clip"); ap.add_argument("t_in", type=float); ap.add_argument("dur", type=float)
+ap.add_argument("mode", nargs="?", default="real", choices=["real", "slow"])
+ap.add_argument("--dir", help="shoot folder the clip is in (or under)"); ap.add_argument("--prefix", default="")
+A = ap.parse_args()
+import numpy as np, cv2
 import mediapipe as mp
-D = os.path.expanduser("~/mnt/Namir Mikha/[01. Content]/Videography/1. SHOOTS/2026/Shoot 16. Bishop St")
+CLIP_PATH = find_clip(A.dir, A.clip, A.prefix)
 def path(c):
-    return f"{D}/Day 1/{c}.MP4" if c.startswith("C08") else f"{D}/Day 2/FX3 A CAM Gimbal/LIAM.A_FX3_{c}.MP4"
+    return CLIP_PATH
 TH = 0.35; EDGE = 0.3; NUDGE = 0.5
-clip, t_in, dur = sys.argv[1], float(sys.argv[2]), float(sys.argv[3])
+clip, t_in, dur = A.clip, A.t_in, A.dur
 fps = float(subprocess.run(["ffprobe","-v","error","-select_streams","v:0","-show_entries","stream=r_frame_rate","-of","csv=p=0",path(clip)],capture_output=True,text=True).stdout.strip().split("/")[0])
 a = max(0, t_in - NUDGE); b = t_in + dur + NUDGE
 W, H = 1920, 1080

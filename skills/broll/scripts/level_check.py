@@ -1,8 +1,11 @@
 """Measure how far a 9:16 still is off-level: median angle of near-vertical lines (walls, door frames,
 window mullions). Returns degrees to ROTATE the picture (positive = counter-clockwise) to make verticals vertical,
-plus the minimum zoom that keeps the frame covered after that rotation."""
-import cv2,numpy as np,sys,math,json
+plus the minimum zoom that keeps the frame covered after that rotation.
+usage: level_check.py [--center] [--card JOB_CARD.md | --size 1080x1920] [--src-aspect 16:9] STILL...
+The zoom maths assume the delivery size (default 1080x1920) filled by a --src-aspect source (default 16:9)."""
+import sys,math,json
 def vert_tilt(path,center=None):
+    import cv2,numpy as np
     im=cv2.imread(path,cv2.IMREAD_GRAYSCALE); h,w=im.shape
     im=cv2.createCLAHE(clipLimit=3.0,tileGridSize=(8,8)).apply(cv2.normalize(im,None,0,255,cv2.NORM_MINMAX))
     e=cv2.Canny(cv2.GaussianBlur(im,(5,5),0),20,60)
@@ -27,9 +30,18 @@ def min_zoom(theta_deg,win_w=1080,win_h=1920,img_w=3413.3,img_h=1920,cx=0.0):
             z=max(z,u/(img_w/2),v/(img_h/2))
     return z
 if __name__=='__main__':
-    out={}; args=sys.argv[1:]; ctr=None
-    if args and args[0]=='--center': ctr=(0.3,0.7); args=args[1:]
-    for p in args:
+    import argparse
+    from _beon import add_delivery_args, delivery
+    ap=argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("stills",nargs="+"); ap.add_argument("--center",action="store_true",help="verticals in the middle 40%% only (keystone exteriors)")
+    ap.add_argument("--src-aspect",default="16:9"); add_delivery_args(ap,fps=False)
+    A=ap.parse_args(); d=delivery(A)
+    sw,sh=(float(v) for v in A.src_aspect.split(":"))
+    fill=max(d["width"]/sw,d["height"]/sh)       # source scaled to cover the frame
+    geo=dict(win_w=d["width"],win_h=d["height"],img_w=sw*fill,img_h=sh*fill)
+    if (d["width"],d["height"])==(1080,1920) and A.src_aspect=="16:9": geo["img_w"]=3413.3
+    out={}; ctr=(0.3,0.7) if A.center else None
+    for p in A.stills:
         a,n=vert_tilt(p,ctr)
-        out[p]=dict(lean_deg=a,lines=n,rotate=None if a is None else -a,zoom=None if a is None else round(min_zoom(a)*1.005,4))
+        out[p]=dict(lean_deg=a,lines=n,rotate=None if a is None else -a,zoom=None if a is None else round(min_zoom(a,**geo)*1.005,4))
     print(json.dumps(out,indent=1))

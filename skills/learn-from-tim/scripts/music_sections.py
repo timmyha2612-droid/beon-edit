@@ -3,8 +3,13 @@
 usage: music_sections.py SONG.wav IN_FRAMES [FPS=24]
 SONG.wav: mono decode of the song (ffmpeg -i song.m4a -ac 1 -ar 22050 song.wav).
 IN_FRAMES: the music clip's In (left offset) on the timeline, from the DRT <In> field.
+FPS: the timeline fps (job card Delivery line / client profile delivery.fps); 24 is the Beon default.
 Prints the tempo, where the full band comes in, and the dips (phrase changes). Compare these to
 story beats, the break and the end card."""
+import sys
+if len(sys.argv) < 3 or sys.argv[1] in ("-h", "--help"):
+    sys.exit(__doc__)
+
 import sys, wave, numpy as np
 w=wave.open(sys.argv[1]); SR=w.getframerate(); x=np.frombuffer(w.readframes(w.getnframes()),np.int16).astype(np.float32)/32768
 fps=float(sys.argv[3]) if len(sys.argv)>3 else 24; off=int(sys.argv[2])/fps

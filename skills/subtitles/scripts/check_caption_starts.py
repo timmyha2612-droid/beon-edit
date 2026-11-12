@@ -3,24 +3,36 @@
 whisper, whose word times run up to ~12 frames off: Simone C03b "Like, it's marketing 101." went up
 9 frames early, over the end of "essential", because whisper put "Like" inside the word before).
 
-usage: check_caption_starts.py WORK/<name>_state.json OUT_DIR/tl.wav [--fix PLAN.json]
+usage: check_caption_starts.py WORK/<name>_state.json OUT_DIR/tl.wav [--fix PLAN.json] [--card JOB_CARD.md]
+       [--lang en] [--model PATH]   (language: shoot / client profile via --card, else en;
+       model: editor.json tools.whisper.model, else ~/whisper-models/ggml-large-v3.bin)
 (state from export_state.py, tl.wav from timeline_audio.py)
 
-A caption is EARLY when she is still finishing the previous line (or silent) at its start and starts
+A caption is EARLY when the speaker is still finishing the previous line (or silent) at its start and starts
 its first word after a pause that ends within 24 frames after it; LATE when a pause ended more than 4
 frames before it and it starts mid-word. The right start is 1 frame before speech resumes, or a
 picture cut from 8 frames before that onset to 6 after (cuts win inside that window).
 Every flag is confirmed by ear before it counts: the stretch between the caption's start and the
 proposed one is transcribed. EARLY is real only when that stretch doesn't already hold the caption's
-first word; LATE is real only when the stretch opens on that word (she says it before the caption appears; C03f
+first word; LATE is real only when the stretch opens on that word (the speaker says it before the caption appears; C03f
 "difference in" means the break has no pause, not that the caption is late).
 --fix writes a retime_captions_drt.py plan that moves only the confirmed starts (the caption before
 each one ends there), leaving text and every other caption as they are.
 """
-import json, sys, wave, array, math
+import argparse, json, os, sys, wave, array, math
 
-state, wav = sys.argv[1], sys.argv[2]
-fix = sys.argv[sys.argv.index("--fix") + 1] if "--fix" in sys.argv else None
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import subs_intake  # noqa: E402
+
+ap = argparse.ArgumentParser(description="Check every caption start against the pauses in the speech.")
+ap.add_argument("state"); ap.add_argument("wav")
+ap.add_argument("--fix", help="write a retime_captions_drt.py plan here")
+ap.add_argument("--card", help="job card: language from its shoot / client profile")
+ap.add_argument("--lang", help="whisper language (default: from --card, else en)")
+ap.add_argument("--model", default=subs_intake.whisper_model(), help="whisper model (default: editor.json tools.whisper.model)")
+args = ap.parse_args()
+state, wav, fix = args.state, args.wav, args.fix
+lang = args.lang or subs_intake.language(args.card)
 s = json.load(open(state)); fps = s.get("fps", 24)
 sub = min(c[3] for c in s["caps"]); caps = sorted(c for c in s["caps"] if c[3] == sub)
 cuts = sorted({a for a, _ in s["v1"]} - {0})
@@ -63,7 +75,7 @@ def heard(a, b):
     d = tempfile.mkdtemp()
     subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-ss", f"{a / fps:.3f}", "-t", f"{(b - a) / fps:.3f}", "-i", wav,
                     "-af", "apad=pad_dur=1", f"{d}/w.wav"], check=True)
-    r = subprocess.run(["whisper-cli", "-m", os.path.expanduser("~/whisper-models/ggml-large-v3.bin"), "-l", "en", "-nt", "-np", f"{d}/w.wav"],
+    r = subprocess.run(["whisper-cli", "-m", args.model, "-l", lang, "-nt", "-np", f"{d}/w.wav"],
                        capture_output=True, text=True)
     return r.stdout.strip()
 
@@ -86,7 +98,7 @@ for i in list(moves):
             del moves[i]; continue
     else:
         got = heard(max(0, want - 2), st + 1)
-        has = first and got.split() and norm(got.split()[0]) == first    # the stretch must OPEN on her first word
+        has = first and got.split() and norm(got.split()[0]) == first    # the stretch must OPEN on the first word
         if not has:
             print(f"{s['name']} [{i}] looks late but '{got}' doesn't hold its first word yet: left alone")
             del moves[i]; continue

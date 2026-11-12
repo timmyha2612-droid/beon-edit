@@ -1,4 +1,6 @@
-
+# LEGACY, kept for reference only. Do not run: it measured inside Resolve's Python, which made
+# Resolve lag (colour-grade "Keep Resolve light"). Use calib.py / measnp.py outside Resolve instead.
+# Its /tmp/claude_drx paths and 3840x2160 / 1080x1920 sizes are the old hardcoded ones.
 import sys, json, os, time
 sys.path.insert(0,"/tmp/claude_drx")
 import meas

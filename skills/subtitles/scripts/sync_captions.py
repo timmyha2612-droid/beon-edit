@@ -8,6 +8,8 @@ Each caption goes up 1 frame before its first spoken word; it snaps to a picture
 frames before the word or 6 after it. Captions under 14 frames are merged into the previous one when the
 text fits on 2 lines of 28, otherwise flagged."""
 import json, sys, re, difflib
+if len(sys.argv) < 4 or sys.argv[1] in ("-h", "--help"):
+    sys.exit(__doc__)
 s = json.load(open(sys.argv[1])); d = json.load(open(sys.argv[2]))
 sub_track = min(c[3] for c in s["caps"]); caps = sorted(c for c in s["caps"] if c[3] == sub_track); cuts = sorted({a for a, _ in s["v1"]} - {0}); FPS = s.get("fps", 24); end = max(c[1] for c in caps)
 words = []

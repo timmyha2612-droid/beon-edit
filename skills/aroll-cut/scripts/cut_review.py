@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Look at every A-roll join before Tim does: picture either side, the waveform across it, the jump size.
-usage: cut_review.py CUT.json OUT_DIR [--per-sheet 6] [--workers 4]
+"""Look at every A-roll join before the editor does: picture either side, the waveform across it, the jump size.
+usage: cut_review.py CUT.json OUT_DIR [--per-sheet 6] [--workers 4] [--card JOB.md | --size 1080x1920]
 CUT.json is cut_pieces.py output ("video", "wav", "pans", pieces[].subs with source in/out).
 For each join between consecutive sub-pieces it renders one row:
   [last frame of A] [first frame of B] [A/B difference]  [waveform: 1 s before the cut | 1 s after]
-in the 9:16 window (Pan from "pans" per label, Zoom 1), and measures
+in the delivery window (Pan from "pans" per label, Zoom 1): --size, else the job card's delivery
+(Delivery line / client profile, via --card), else Beon's 9:16 1080x1920. It measures
   shift%  head/frame shift across the cut (phase correlation, % of frame width)
   diff    mean absolute difference after aligning (0-255)
   air     silence across the join (s): should be about 0.22-0.30
@@ -15,15 +16,25 @@ waveform) and still counts as a jump cut if the head moves between the frames.
 Tested on Arriva Oct C1 (18 joins, 18 s in the VM with 4 workers).
 Writes OUT_DIR/joins_NN.jpg and OUT_DIR/joins.json. Look at the sheets: mouth half-open on an
 edge frame, a breath cut in half, or a waveform that runs into the cut line are things to fix."""
-import argparse, json, os, subprocess, sys, wave
+import argparse, json, os, pathlib, subprocess, sys, wave
 from concurrent.futures import ThreadPoolExecutor
-import numpy as np
-import cv2
 
-ap = argparse.ArgumentParser()
+ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 ap.add_argument("cut"); ap.add_argument("out")
 ap.add_argument("--per-sheet", type=int, default=6); ap.add_argument("--workers", type=int, default=4)
+ap.add_argument("--card", help="job card: frame size from its delivery (Delivery line / client profile)")
+ap.add_argument("--size", help="delivery frame WxH, e.g. 1080x1920 (overrides --card)")
 a = ap.parse_args()
+TW, TH = 1080, 1920
+if a.size:
+    TW, TH = (int(v) for v in a.size.lower().split("x"))
+elif a.card:
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "house-rules" / "scripts"))
+    import beon_config as bc
+    d = bc.delivery(a.card)
+    TW, TH = int(d["width"]), int(d["height"])
+import numpy as np
+import cv2
 os.makedirs(a.out, exist_ok=True)
 C = json.load(open(a.cut))
 pans = C.get("pans") or {}
@@ -38,20 +49,25 @@ def probe(v):
     return s["width"], s["height"], float(n) / float(d)
 
 
-def crop(pan, w, h, tw=1080, th=1920, zoom=1.0):
+def crop(pan, w, h, tw=None, th=None, zoom=1.0):
+    tw, th = tw or TW, th or TH
     s = th / h * zoom
     cw = min(w, tw / s); ch = min(h, th / s)
     cx = max(0, min(w - cw, w / 2 - pan / s - cw / 2))
     return int(cw) // 2 * 2, int(ch) // 2 * 2, int(cx), int(max(0, (h - ch) / 2))
 
 
+TN_H = 384                                   # thumbnail height; width follows the delivery aspect (216 for 9:16)
+TN_W = max(2, int(round(TN_H * TW / TH / 2)) * 2)
+
+
 def grab(t, pan):
     cw, ch, cx, cy = crop(pan, W, H)
     r = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{max(0, t):.3f}", "-i", C["video"], "-frames:v", "1",
-                        "-vf", f"crop={cw}:{ch}:{cx}:{cy},scale=216:384", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"],
+                        "-vf", f"crop={cw}:{ch}:{cx}:{cy},scale={TN_W}:{TN_H}", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"],
                        capture_output=True, timeout=60)
-    buf = r.stdout[:216 * 384 * 3]
-    return np.frombuffer(buf, np.uint8).reshape(384, 216, 3).copy() if len(buf) == 216 * 384 * 3 else np.zeros((384, 216, 3), np.uint8)
+    buf = r.stdout[:TN_W * TN_H * 3]
+    return np.frombuffer(buf, np.uint8).reshape(TN_H, TN_W, 3).copy() if len(buf) == TN_W * TN_H * 3 else np.zeros((TN_H, TN_W, 3), np.uint8)
 
 
 def wav_energy(path):
@@ -100,9 +116,9 @@ def one(j):
     gb = cv2.cvtColor(B, cv2.COLOR_BGR2GRAY).astype(np.float32)
     (dx, dy), _ = cv2.phaseCorrelate(ga, gb)
     M = np.float32([[1, 0, -dx], [0, 1, -dy]])
-    gb2 = cv2.warpAffine(gb, M, (216, 384), borderMode=cv2.BORDER_REPLICATE)
+    gb2 = cv2.warpAffine(gb, M, (TN_W, TN_H), borderMode=cv2.BORDER_REPLICATE)
     diff = float(np.abs(ga[20:-20, 20:-20] - gb2[20:-20, 20:-20]).mean())
-    shift = float(np.hypot(dx, dy) / 216 * 100)
+    shift = float(np.hypot(dx, dy) / TN_W * 100)
     same = abs(pans.get(la, 0) - pans.get(lb, 0)) < 30
     sug = "invisible" if shift < 0.5 and diff < 6 else "smooth cut" if shift < 2 and diff < 12 and same else "cover"
     D = cv2.absdiff(A, B)

@@ -1,6 +1,6 @@
 """Typeset Kinetic captions word by word (Fluid Reveal Words Kinetic).
 
-    python3 kinetic_layout.py WORK_DIR [--font libre|garet --width 3840 --height 2160 --size 0.075 --slam 1.25]
+    python3 kinetic_layout.py WORK_DIR [--font libre|garet --width 3840 --height 2160 | --card JOB_CARD.md --size 0.075 --slam 1.25]
 
 Needs uharfbuzz + fonttools (run from a venv). Reads WORK/plans.json, KEYS from WORK/captions.py
 (KEYS = {caption index: {display token number: 1 key | 2 key + larger}}) and BLOCKS from
@@ -35,8 +35,11 @@ import json
 import os
 import sys
 
-import uharfbuzz as hb
-from fontTools.ttLib import TTFont
+try:  # needs a venv with uharfbuzz + fonttools; --help works without them
+    import uharfbuzz as hb
+    from fontTools.ttLib import TTFont
+except ImportError:
+    hb = TTFont = None
 
 SIZE_TO_LINE = 0.7987   # Text+ Size x frame width = this many hhea line heights
 FONTSETS = {
@@ -133,12 +136,22 @@ def window(block, start, end):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("work")
-    ap.add_argument("--width", type=float, default=3840)
-    ap.add_argument("--height", type=float, default=2160)
+    ap.add_argument("--width", type=float, help="frame width in px (default: --card delivery, else 3840)")
+    ap.add_argument("--height", type=float, help="frame height in px (default: --card delivery, else 2160)")
+    ap.add_argument("--card", help="job card: frame size from its Delivery line / client profile")
     ap.add_argument("--size", type=float, default=0.075)
     ap.add_argument("--slam", type=float, default=1.25)
     ap.add_argument("--font", choices=sorted(FONTSETS), default="libre")
     a = ap.parse_args()
+    if hb is None:
+        sys.exit("kinetic_layout.py needs uharfbuzz + fonttools: run it from their venv (e.g. hb/bin/python)")
+    if a.card and (a.width is None or a.height is None):
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import subs_intake
+        d = subs_intake.delivery(a.card)
+        a.width = a.width or float(d["width"])
+        a.height = a.height or float(d["height"])
+    a.width, a.height = a.width or 3840.0, a.height or 2160.0
     sys.path.insert(0, a.work)
     from captions import KEYS
     from blocks import BLOCKS

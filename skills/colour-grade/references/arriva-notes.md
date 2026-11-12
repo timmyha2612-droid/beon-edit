@@ -35,4 +35,4 @@ Effects are close to linear. Solve the 2×2 system for Temp/Tint per hero, then 
 2. Apply 1 (t200) and its LUT worked. The item read back Temp 200 / Tint 0 / HDR 0 in the DRT, which proved the writer.
 3. Apply 2 (tm200) on the same, now-graded item never returned. Every scripting call timed out after that, and Resolve closed; Tim reopened it. Nothing was lost (the timelines were saved).
 4. Afterwards: three applies on three fresh clips of a scratch timeline took 0.12–0.29 s each, and each `ExportLUT` about 0.15 s.
-5. Rule: one apply per clip, nothing heavy in loops inside Resolve, measure in the VM.
+5. Rule: one apply per clip, nothing heavy in loops inside Resolve, measure outside Resolve (numpy).

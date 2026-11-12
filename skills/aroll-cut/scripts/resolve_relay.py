@@ -1,4 +1,4 @@
-"""Build a recut copy of a timeline from recut_plan.py output. Tim's timeline is never touched.
+"""Build a recut copy of a timeline from recut_plan.py output. The editor's timeline is never touched.
 Run through the Resolve MCP run_script tool (sandboxed: paste the plan into PLAN). Two steps so each
 call stays well under the 60 s limit:
   STEP = "create"  duplicate PLAN["source"] as PLAN["copy"], empty every track, re-add the markers
@@ -10,6 +10,7 @@ A-roll items are appended with their audio (multicam or A cam), everything else 
 Check afterwards: item counts per track, the running time, and cut_review.py on a proxy render."""
 import math
 
+# Runs inside Resolve (no beon_config): the timeline fps comes from the source timeline itself.
 PLAN = {}            # paste plan.json here
 STEP = "create"      # "create" or "place"
 TRACKS = ["video1"]  # for STEP = "place"

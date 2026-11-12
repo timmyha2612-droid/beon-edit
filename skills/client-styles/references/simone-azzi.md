@@ -1,6 +1,26 @@
+---
+slug: simone-azzi
+name: Simone Azzi
+who: Real estate agent; interview-style advice shorts for home sellers (vendors)
+people:
+  - {name: Simone Azzi, role: presenter (agent)}
+concept_types:
+  - {name: "advice short (Nov C03 series, one answer per short)", target_length: "35-82 s; a complete thought beats 45-60 s"}
+footage: {path_pattern: "{root}/Simone Azzi/{Month}/", write_protected: false}
+resolve: {project: "Simone Azzi", bins: "backups in the bin's Backup folder", timeline_naming: "C03a to C03h, then v2/v3 rebuilds"}
+delivery: {aspect: "9:16", resolution: 1080x1920, fps: 24, loudness_lufs: ask, true_peak_db: ask}
+end_card: {kind: compound, asset: "Compound Clip 2", length_f: ask, music_tail_s: ask}
+audio: {dialogue_enhance: "Adobe Podcast; enhanced MP3 on A2", music: editor}
+subtitles: {look: "plain white Text+, one per caption, no animation, Size 0.07, Center (0.5, 0.27), on V3", title: Text+, font: "Times New Roman Regular", reference_timeline: C03a}
+grade: {template_still: default, aroll_policy: "copy from the original timeline's first V1 item"}
+language: en
+brand_words: ["Domain", "realestate.com", "REA"]
+open_questions: ["Is 'cut sentence-start you know, keep mid-phrase ones' the rule, or case by case?", "Default 4-frame audio cross-fade on every A1 join for Simone?", "Music on future Simone shorts: none, or very low?", "Loudness target?"]
+---
+
 # Simone Azzi style profile
 
-Tags: [Tim] confirmed by Tim · [Simone] client feedback · [inferred] measured from his finals, not confirmed · ask = unknown. Add the source (concept, date) to each rule.
+Tags: [Tim] or [<editor>] said or confirmed by that editor · [Simone] client feedback · [inferred] measured from finished edits, not confirmed · ask = unknown. Add the source (concept, date) to each rule.
 
 ## Client and footage
 - Who: Simone Azzi, real estate agent; interview-style advice shorts for home sellers (vendors).
@@ -33,7 +53,7 @@ Tags: [Tim] confirmed by Tim · [Simone] client feedback · [inferred] measured 
 - None in the C03 series.
 
 ## Audio and music
-- Dialogue: A1 camera audio while editing; Tim then exports "<name> audio" for Adobe Podcast and lays the enhanced MP3 on A2 (file names like `SA_NOV_C3A_V1 audio-esv2-…`). Any recut needs a fresh enhanced pass.
+- Dialogue: A1 camera audio while editing; the editor then exports "<name> audio" for Adobe Podcast and lays the enhanced MP3 on A2 (file names like `SA_NOV_C3A_V1 audio-esv2-…`). Any recut needs a fresh enhanced pass.
 - Music [Simone, C03h, 9 Nov 2026]: "background music is distracting on top of me talking 3000 miles an hour." C03h ships without music; Tim kept music on C03a–d (ask before muting others).
 - Beeps: `beep_1k.wav` over a gap in A1 (C03h "f*** up").
 
@@ -45,14 +65,15 @@ Tags: [Tim] confirmed by Tim · [Simone] client feedback · [inferred] measured 
 - Title: plain Text+, one per caption, Times New Roman Regular, Size 0.07, white, Center (0.5, 0.27), no animation, on track V3 "Subtitles" [Tim, Nov C03].
 - Clean verbatim, new sentence = new caption, ≤2 lines of 28 characters; bleeped word shown as "f***".
 - Captions change on the picture cut (snap ≤8 frames before / 6 after the first word); Tim accepted the v2 caption text and timing without edits [Tim, C03a–d, 11 Nov 2026].
-- Where Tim's look can be read: any C03 timeline's V3 (e.g. "C03a").
+- Where the look can be read: any C03 timeline's V3 (e.g. "C03a").
 
 ## Grade
 - Template: Tim's 9-node template; copy the grade from the original timeline's first V1 item.
-- Skin shine: Simone noticed it ("shiny") — Tim handles it in the grade; don't touch [Tim, 11 Nov 2026].
+- Skin shine: Simone noticed it ("shiny") — the editor handles it in the grade; don't touch [Tim, 11 Nov 2026].
 - Question cards: Tim's own PNG designs (V4/V5) from the hook titles; keep them, never rebuild [Tim, 11 Nov 2026]. C03a card held 117 frames in the final.
 
-## Open questions for Tim
+## Open questions (mirrored in the front matter `open_questions`)
 - Is "cut sentence-start 'you know', keep mid-phrase ones" the rule, or case by case?
 - Default 4-frame audio cross-fade on every A1 join for Simone?
 - Music on future Simone shorts: none, or very low?
+- Loudness target?

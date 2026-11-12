@@ -12,6 +12,9 @@ switches page or timeline, and never touches anything else.
 import difflib
 import re
 
+# Runs inside Resolve, so it can't read the intake files: fps comes from the timeline and each clip,
+# words from Resolve's transcript of A1 (language: Resolve's project setting, set from shoot.language /
+# the client profile). The timing constants below are Beon house rules.
 GROUP = "FluidRevealWords"
 LEAD = 2          # words start revealing this many frames before they are spoken
 MIN_GAP = 4       # words always reveal one at a time, at least this many frames apart

@@ -32,7 +32,7 @@ Strips: FP movement pan, tilt, pan_tilt or gimbal, handheld with more than one m
 Sanity: the first and last cell of every sheet are cut back out and compared to their tiles. A mismatch
   regenerates the sheet once, then stops with an error.
 Colour histograms are never used (useless on flat S-Log3). Stdlib python and plain ffmpeg only.
-Source files are only read. Output paths inside CloudStorage/Dropbox or _shotlog are refused."""
+Source files are only read. Output paths inside Dropbox, editor.json synced_folders or _shotlog are refused."""
 import argparse, math, os, re, subprocess, sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime

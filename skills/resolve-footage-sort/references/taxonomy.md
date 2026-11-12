@@ -1,6 +1,6 @@
 # Footage sort taxonomy
 
-Tables for `resolve-footage-sort`. Claude uses these words in `looks.json` and the shot log. Scripts match exact tokens, so never invent a new word silently. Propose it at the gate, add it here only after Tim approves.
+Tables for `resolve-footage-sort`. Claude uses these words in `looks.json` and the shot log. Scripts match exact tokens, so never invent a new word silently. Propose it at the gate. Adding it here is a general lesson: the editor approves it, then the plugin owner commits it or another editor opens a pull request (learn-from-tim).
 
 ## 1. Families by shoot kind (place sort)
 
@@ -13,7 +13,7 @@ Stored in `place.family`. Bins follow journey order: outside to in, arrival to l
 | Event or lunch | venue (Venue and Arrivals), stage (Speeches), guests (Guests and Mingling), setting (Tables and Setting), food (Food and Drink), branding (Branding and Signage), details (Details) |
 | Office or teaser | exterior (Exterior and Lobby), reception (Reception and Branding), floor (Office Floor), meeting (Meeting Rooms), breakout (Kitchen and Breakout), team (Team Moments), details (Desks and Details) |
 | Signboards | one flat bin per address (`12 Example St`). Board, context and agent are subject tags, not sub-bins |
-| Interview | one bin per person (A and B cams together, cam in the shot log). The multicam clip stays where Tim made it. B-roll by the families above |
+| Interview | one bin per person (A and B cams together, cam in the shot log). The multicam clip stays where the editor made it (`shoot.multicam.clip`). B-roll by the families above |
 | Aerial | aerial (Aerials) |
 
 Mixed shoots use families from more than one row, in journey order. Granularity on area shoots: fine (one bin per named landmark) by default. Show the coarse version (landmarks folded into one street bin) at the gate when it exists. The shot log keeps fine place ids either way.
@@ -36,7 +36,7 @@ Mixed shoots use families from more than one row, in journey order. Granularity 
 - **vertical:** ok, pan (needs a Pan to subject_x), hard.
 - **subject_x:** 0 to 1 across the 16:9 frame. 9:16 Pan = (0.5 - x) * 1080.
 - **confidence:** high, med, low. Low always gets a second look.
-- **people_detail:** `{count, role, faces, names, minors_visible}`. role: subject, passer-by, crowd. faces: recognisable, back, none. names only from the people registry or Tim. Never write it as `people`: that key is the shot log's existing people list.
+- **people_detail:** `{count, role, faces, names, minors_visible}`. role: subject, passer-by, crowd. faces: recognisable, back, none. names only from the people registry (`shoot.people`) or the editor. Never write it as `people`: that key is the shot log's existing people list.
 
 ## 4. good_for grammar (exact tokens)
 
@@ -61,4 +61,4 @@ Mixed shoots use families from more than one row, in journey order. Granularity 
 - Place ids: kebab-case (`corner-park`).
 - Scene ids: `<place-id>-<n>`, a new n each time the place comes back in a later session or light.
 - Setup ids: `<scene-id>-s<nn>`.
-- `sort.tim` entries: `{field: place|scene|roles|good_for|bin, from, to, date}`. learn-from-tim counts these per field and per client.
+- `sort.editor_changes` entries: `{field: place|scene|roles|good_for|bin, from, to, date, editor}` (`editor` = editor.json `name`). Older logs call the list `sort.tim` (no `editor`): read both, write `editor_changes`. learn-from-tim counts these per field and per client.

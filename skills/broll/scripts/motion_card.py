@@ -1,24 +1,32 @@
 #!/usr/bin/env python3
 """Motion card: read a B-roll shot's movement from one image.
-usage: motion_card.py CLIP T_IN SRC_DUR OUT.png [--speed 48] [--pan 0 --tilt 0 --zoom 1] [--label R4]
-T_IN/SRC_DUR in source seconds. Crop = the 9:16 window the timeline shows (1080x1920, fill height).
+usage: motion_card.py CLIP T_IN SRC_DUR OUT.png [--speed 100] [--pan 0 --tilt 0 --zoom 1] [--label R4]
+                      [--root SHOOT] [--card JOB_CARD.md | --size 1080x1920 --fps 24]
+T_IN/SRC_DUR in source seconds. Crop = the window the timeline shows (delivery size from --card/--size,
+default 9:16 1080x1920, source scaled to cover it); jitter in px at the delivery width, output frames at the
+timeline fps (default 24). With --root, CLIP can be a stem or a path relative to the shoot (A001/C0012.MP4).
 Prints a one-line JSON verdict; the PNG has a filmstrip, first/last onion skin with flow arrows,
 the camera path (pan/tilt/zoom speed) and per-frame jitter at output resolution.
 Jitter tiers are provisional (calibrate against gyro): <1.0 px pass, 1.0-2.0 check, >2.0 fix."""
-import sys, json, argparse, subprocess, numpy as np, cv2
-import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
-ap=argparse.ArgumentParser()
+import os, json, argparse, subprocess
+from _beon import add_delivery_args, delivery, find_clip
+ap=argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
 ap.add_argument("clip"); ap.add_argument("t_in",type=float); ap.add_argument("dur",type=float); ap.add_argument("out")
 ap.add_argument("--speed",type=float,default=100); ap.add_argument("--pan",type=float,default=0); ap.add_argument("--tilt",type=float,default=0)
 ap.add_argument("--zoom",type=float,default=1); ap.add_argument("--label",default=""); ap.add_argument("--W",type=int,default=270)
+ap.add_argument("--root",help="shoot or card folder CLIP is relative to"); add_delivery_args(ap)
 a=ap.parse_args()
+import numpy as np, cv2
+import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
+DL=delivery(a); OW,OH,TLF=DL["width"],DL["height"],DL["fps"]
+if a.root or not os.path.isfile(a.clip): a.clip=find_clip(a.root,a.clip)
 def probe(clip):
     r=subprocess.run(["ffprobe","-v","error","-select_streams","v:0","-show_entries","stream=width,height,r_frame_rate","-of","json",clip],capture_output=True,text=True)
     s=json.loads(r.stdout)["streams"][0]; n,d=s["r_frame_rate"].split("/"); return s["width"],s["height"],float(n)/float(d)
 SW,SH,FPS=probe(a.clip)
-s=1920/SH*a.zoom; cw=min(SW,int(1080/s))//2*2; ch=min(SH,int(1920/s))//2*2
+s=max(OW/SW,OH/SH)*a.zoom; cw=min(SW,int(OW/s))//2*2; ch=min(SH,int(OH/s))//2*2
 cx=int(max(0,min(SW-cw,SW/2-a.pan/s-cw/2))); cy=int(max(0,min(SH-ch,SH/2+a.tilt/s-ch/2)))
-W=a.W; H=int(W*16/9)//2*2
+W=a.W; H=int(W*OH/OW)//2*2
 def frames(fmt,ch_):
     vf=f"crop={cw}:{ch}:{cx}:{cy},scale={W}:{H}:flags=area,format={fmt}"
     r=subprocess.run(["ffmpeg","-v","error","-ss",f"{a.t_in:.3f}","-i",a.clip,"-t",f"{a.dur:.3f}","-vf",vf,"-f","rawvideo","-"],capture_output=True)
@@ -47,8 +55,8 @@ dx=np.array(dx);dy=np.array(dy);dz=np.log(np.array(ds))*100;dr=np.array(dr)
 k=max(3,int(round(FPS*0.4))|1)
 def smooth(v): pad=np.pad(v,(k//2,k//2),mode="edge"); return np.convolve(pad,np.ones(k)/k,"valid")
 sx_,sy_,sz_,sr_=smooth(dx),smooth(dy),smooth(dz),smooth(dr)
-jit=np.hypot(dx-sx_,dy-sy_)*(1080/W)          # px per source frame at output res
-spf=(FPS*a.speed/100)/24                         # source frames per output frame
+jit=np.hypot(dx-sx_,dy-sy_)*(OW/W)            # px per source frame at output res
+spf=(FPS*a.speed/100)/TLF                        # source frames per output frame
 jit_out=jit*min(1.0,spf)
 sp=np.hypot(sx_,sy_)
 # move label
@@ -94,6 +102,6 @@ ax.plot(t,sx_,label="pan (+right)"); ax.plot(t,sy_,label="tilt (+down)"); ax.plo
 ax.axhline(0,color="grey",lw=.6); ax.set_title("camera speed, px/frame (smoothed)",fontsize=9); ax.legend(fontsize=7); ax.tick_params(labelsize=7)
 ax=fig.add_subplot(gs[2,0:6]); ax.plot(t,jit_out,color="black",lw=1)
 for y,c in ((1.0,"#2E8F52"),(2.0,"#C8423A")): ax.axhline(y,color=c,lw=.8,ls="--")
-ax.set_title("jitter per output frame (px at 1080 wide); green = pass line, red = fix line",fontsize=9); ax.set_xlabel("seconds into window",fontsize=8); ax.tick_params(labelsize=7)
+ax.set_title(f"jitter per output frame (px at {OW} wide); green = pass line, red = fix line",fontsize=9); ax.set_xlabel("seconds into window",fontsize=8); ax.tick_params(labelsize=7)
 fig.suptitle(f"{a.label}  {label}  |  jitter p90 {p90:.2f}px ({tier})  |  {'; '.join(flags) or 'clean move'}",fontsize=11,fontweight="bold")
 fig.savefig(a.out,bbox_inches="tight"); print(json.dumps(verdict))

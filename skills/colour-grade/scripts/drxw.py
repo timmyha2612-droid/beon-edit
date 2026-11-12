@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Write a Resolve grade (DRX) with new Balance Temp/Tint and HDR Global values.
 usage: drxw.py TEMPLATE.drx OUT.drx TEMP TINT HDR_GLOBAL
-TEMPLATE = a still exported with GalleryStillAlbum.ExportStills(..., "drx") (Tim's 9-node tree).
+TEMPLATE = a still exported with GalleryStillAlbum.ExportStills(..., "drx") (Beon's 9-node template,
+or the client profile's grade.template_still), into the job's scratch folder (beon_config.scratch_dir).
 Only those three values change; every other byte of the grade is kept. Proven 15 Oct 2026 on
 Resolve 21.1.1: the parse/encode round trip is byte-exact, and a written DRX applied with
 Graph.ApplyGradeFromDRX(path, 0) read back exactly from the timeline DRT.
@@ -14,8 +15,11 @@ try:
     from compression import zstd as _z
     def zcompress(b): return _z.compress(b)
 except Exception:
-    import zstandard
-    def zcompress(b): return zstandard.ZstdCompressor(level=3).compress(b)
+    try:
+        import zstandard
+        def zcompress(b): return zstandard.ZstdCompressor(level=3).compress(b)
+    except ImportError:
+        def zcompress(b): raise SystemExit("needs zstd: pip install zstandard (or Python 3.14+)")
 
 TEMP, TINT, HDR = 2248147221, 2248147222, 2248147717
 
@@ -91,6 +95,8 @@ def make_drx(template, out_path, temp, tint, hdr):
     return out_path
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] in ("-h", "--help"):
+        print(__doc__); sys.exit(0)
     if len(sys.argv) != 6:
         sys.exit(__doc__)
     print(make_drx(sys.argv[1], sys.argv[2], float(sys.argv[3]), float(sys.argv[4]), float(sys.argv[5])))

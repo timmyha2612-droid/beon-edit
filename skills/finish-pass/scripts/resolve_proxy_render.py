@@ -1,13 +1,18 @@
-"""Render a small proxy of the current timeline for render_check.py, leaving Tim's render settings as they were.
-Run through the Resolve MCP run_script_unsafe tool (it writes a file), only while Tim isn't using Resolve.
+"""Render a small proxy of the current timeline for render_check.py, leaving the editor's render settings as they were.
+Run through the Resolve MCP run_script_unsafe tool (it writes a file), only while the editor isn't using Resolve.
 Three short calls, because a render outlasts the 60 s script limit:
-  STEP = "start"    save Tim's current render settings as a temporary preset, set a 540x960 H.264
+  STEP = "start"    save the editor's current render settings as a temporary preset, set a half-size H.264
                     proxy (single clip, video + audio) into OUT_DIR, add the job and start it
   STEP = "poll"     report progress (call again until done)
-  STEP = "restore"  delete the proxy job, load Tim's settings back from the temporary preset and
+  STEP = "restore"  delete the proxy job, load the editor's settings back from the temporary preset and
                     delete that preset
-OUT_DIR must be set per shoot (e.g. <shoot folder>/_claude_scratch/proxy) and must be outside Dropbox."""
+OUT_DIR must be set per shoot (e.g. <shoot folder>/_claude_scratch/proxy) and must be outside Dropbox and the
+editor's synced folders (editor.json synced_folders).
+Runs inside Resolve, so it can't read the job card: set PROXY_W/PROXY_H before running."""
 OUT_DIR = ""  # set per shoot before running, e.g. "/Volumes/T7 Shield/Raws/<Client>/<Month>/_claude_scratch/proxy"
+# Half the delivery size from the job card Delivery line / client profile delivery (beon_config.delivery);
+# 540x960 = half of Beon's default 9:16 1080x1920 (16:9 1920x1080 -> 960x540).
+PROXY_W, PROXY_H = 540, 960
 NAME = "proxy_check"
 STEP = "start"
 KEEP = "zz_claude_restore_render_settings"
@@ -27,7 +32,7 @@ if STEP == "start":
     proj.SetCurrentRenderFormatAndCodec("mp4", "H264")
     tl = proj.GetCurrentTimeline()
     proj.SetRenderSettings({"SelectAllFrames": True, "TargetDir": OUT_DIR, "CustomName": NAME,
-                            "FormatWidth": 540, "FormatHeight": 960, "ExportVideo": True, "ExportAudio": True,
+                            "FormatWidth": PROXY_W, "FormatHeight": PROXY_H, "ExportVideo": True, "ExportAudio": True,
                             "VideoQuality": 0})
     job = proj.AddRenderJob()
     out["job"] = job

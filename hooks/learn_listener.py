@@ -1,13 +1,26 @@
 #!/usr/bin/env python3
-"""UserPromptSubmit hook (beon-edit plugin): keep the learning loop listening during every job (Tim, Q14).
+"""UserPromptSubmit hook (beon-edit plugin): keep the learning loop listening during every job ([Tim, Q14]).
 
 When this session has a job card (house-rules/references/job-card.md), every message from the person
 editing gets a short reminder attached: if the message corrects the edit or teaches something, write it
 into the lessons inbox now, with its kind (general / client / concept / unsure). Sessions without a job
-card get nothing, so normal chats aren't touched. Never blocks (exit 0 always)."""
-import json, os, re, sys
+card get nothing, so normal chats aren't touched. The editor's name comes from the card's Editor line,
+else ~/.beon-edit/editor.json. The editor approves their own lessons at the end of the job.
+Never blocks (exit 0 always); without beon_config it still runs, with a plainer placeholder check."""
+import json, os, pathlib, re, sys
 
-JOBS = os.path.expanduser(os.environ.get("BEON_JOBS_DIR", "~/.beon-edit/jobs"))
+try:
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "skills" / "house-rules" / "scripts"))
+    import beon_config as bc
+except Exception as e:
+    bc = None
+    sys.stderr.write(f"beon-edit learning: can't import beon_config ({e}); using the card only.\n")
+
+if bc:
+    JOBS = str(bc.JOBS)
+else:
+    JOBS = os.path.expanduser(os.environ.get("BEON_JOBS_DIR",
+                              os.path.join(os.environ.get("BEON_HOME", "~/.beon-edit"), "jobs")))
 
 try:
     data = json.load(sys.stdin)
@@ -26,13 +39,24 @@ except Exception:
 def field(name):
     m = re.search(rf"^{name}:[ \t]*(\S[^\n]*)$", text, re.M)       # never runs onto the next line
     v = m.group(1).strip() if m else ""
-    if not v or v.lower() in ("n/a", "na", "-") or "<" in v or v.startswith("Tim |"):
+    empty = bc.unfilled(v) if bc else (not v or "<" in v or " | " in v)
+    if empty or v.lower() in ("n/a", "na", "-"):
         return ""                                                       # blank or still the template placeholder
     return v
 
 
+def editor_name():
+    name = field("Editor")
+    if not name and bc:
+        try:
+            name = bc.load_editor().get("name") or ""
+        except Exception:
+            name = ""
+    return name
+
+
 root = os.environ.get("CLAUDE_PLUGIN_ROOT") or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-editor = field("Editor") or "unknown (ask)"
+editor = editor_name() or "unknown (ask the editor their name)"
 inbox = field("Lessons inbox") or "<shoot>/_shotlog/lessons/<concept>.jsonl (add a 'Lessons inbox:' line to the job card)"
 client = field("Client") or ""
 print(
@@ -42,6 +66,6 @@ print(
     "--rule \"<one-line rule>\" --kind general|client|concept|unsure"
     + (f" (client profile: {client})" if client else "")
     + ". General = every client, client = only this client, concept = only this video (never into the plugin), "
-    "unsure = ask at the end of the job. Plain instructions for this edit alone are not lessons; don't log those."
+    "unsure = ask the editor at the end of the job. Plain instructions for this edit alone are not lessons; don't log those."
 )
 sys.exit(0)

@@ -3,13 +3,16 @@ import json
 import os
 import time
 
-BASE = globals().get("WORK", os.path.expanduser("~/subs_work")).rstrip("/") + "/"  # set WORK when exec-ing
+# Inject WORK and FPS when exec-ing: `python3 subs_intake.py --card <job card>` prints both (WORK from
+# the scratch folder, FPS from the job card Delivery line / client profile). Defaults: ~/subs_work, 24.
+BASE = globals().get("WORK", os.path.expanduser("~/subs_work")).rstrip("/") + "/"
+FPS = globals().get("FPS", 24)
 PLANS = json.load(open(BASE + "plans.json"))
 
 
 def tc(frames):
-    f = int(frames)
-    return "%02d:%02d:%02d:%02d" % (f // 86400, f // 1440 % 60, f // 24 % 60, f % 24)
+    f, r = int(frames), int(round(FPS))
+    return "%02d:%02d:%02d:%02d" % (f // (3600 * r), f // (60 * r) % 60, f // r % 60, f % r)
 
 
 def stills(name, a, b, tag):

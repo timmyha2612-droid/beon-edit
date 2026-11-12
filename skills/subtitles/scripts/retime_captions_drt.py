@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """Retime (and merge) the Text+ captions of an exported DRT from a plan.
-usage: retime_captions_drt.py IN.drt OUT.drt PLAN.json [--start FRAME]   (FRAME = timeline start frame, default 86400)
+usage: retime_captions_drt.py IN.drt OUT.drt PLAN.json [--start FRAME | --fps FPS]   (FRAME = timeline start
+frame, default 1 hour at FPS, i.e. 86400 at 24; FPS from the job card Delivery line)
 plan.json: [{"old": [start, text], "new": [start, end, text] or null}, ...] (record frames from the
 timeline start); captions not in the plan (e.g. a Text+ question card) are left alone. Each kept title's text and Fusion comp range are
 rewritten to match."""
 import re, sys, json, zlib, struct, zipfile
 
+if len(sys.argv) < 4 or sys.argv[1] in ("-h", "--help"):
+    sys.exit(__doc__)
 src, dst, plan = sys.argv[1], sys.argv[2], json.load(open(sys.argv[3]))
-T0 = int(sys.argv[sys.argv.index("--start") + 1]) if "--start" in sys.argv else 86400
+FPS = float(sys.argv[sys.argv.index("--fps") + 1]) if "--fps" in sys.argv else 24
+T0 = int(sys.argv[sys.argv.index("--start") + 1]) if "--start" in sys.argv else 3600 * int(round(FPS))
 zin = zipfile.ZipFile(src)
 name = max((n for n in zin.namelist() if n.startswith("SeqContainer/")), key=lambda n: len(zin.read(n)))
 B = zin.read(name).decode()

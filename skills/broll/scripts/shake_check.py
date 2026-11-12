@@ -1,18 +1,22 @@
 """shake_check.py (v4: Savitzky-Golay 9/2 detrend, ends trimmed; features restricted to low-temporal-change background; floor ~0.3 px p90; calibrated +1px sigma shake ->2.0, +2px ->3.3)
-shake_check.py RENDER.mp4 SHOTS.json OUTDIR
-SHOTS.json: [{"shot": "R1 2474", "start": tl_frame, "dur": frames}, ...] (24 fps timeline, render frame = timeline frame)
-Per shot: camera jitter (high-pass of the global similarity path, px at 1080 wide) and glitch candidates
+shake_check.py RENDER.mp4 SHOTS.json OUTDIR [--card JOB_CARD.md] [--fps 24] [--size 1080x1920]
+SHOTS.json: [{"shot": "R1 2474", "start": tl_frame, "dur": frames}, ...] (timeline fps from --fps / the job card
+Delivery, default 24; render frame = timeline frame). Measured at half the delivery size, px at the delivery width.
+Per shot: camera jitter (high-pass of the global similarity path, px at the delivery width, 1080 by default) and glitch candidates
 (frames whose local residual flow or frame difference spikes vs. neighbours). Writes OUTDIR/report.json and
 OUTDIR/<shot>_spikes.jpg strips (frame before | spike frame | after, plus residual-flow heatmap)."""
-import sys, os, json, subprocess
+import argparse, os, json, subprocess
+from _beon import add_delivery_args, delivery
+ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+ap.add_argument("render"); ap.add_argument("shots"); ap.add_argument("outdir"); add_delivery_args(ap)
+A = ap.parse_args(); DL = delivery(A)
 import numpy as np, cv2
-from scipy.ndimage import gaussian_filter1d
 from scipy.signal import savgol_filter
-src, shots_p, out = sys.argv[1], sys.argv[2], sys.argv[3]; os.makedirs(out, exist_ok=True)
+src, shots_p, out = A.render, A.shots, A.outdir; os.makedirs(out, exist_ok=True)
 shots = json.load(open(shots_p))
-W, H = 540, 960; K = 1080 / W
+W, H = DL["width"] // 2, DL["height"] // 2; K = DL["width"] / W; FPS = DL["fps"]
 def read(f0, n):
-    raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", "%.4f" % ((f0 + 0.01) / 24), "-i", src, "-frames:v", str(n),
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", "%.4f" % ((f0 + 0.01) / FPS), "-i", src, "-frames:v", str(n),
                           "-vf", "scale=%d:%d" % (W, H), "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True).stdout
     k = len(raw) // (W * H * 3); return np.frombuffer(raw[:k * W * H * 3], np.uint8).reshape(k, H, W, 3)
 rep = []

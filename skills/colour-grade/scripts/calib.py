@@ -1,30 +1,35 @@
 #!/usr/bin/env python3
-"""Suggest Temp / Tint / HDR Global per hero shot from four calibration LUTs (device VM, numpy).
+"""Suggest Temp / Tint / HDR Global per hero shot from four calibration LUTs (numpy, outside Resolve;
+local Mac, or the device VM if run_env is device-vm).
 usage: calib.py jobs.json LUTDIR OUTDIR [--cb -5] [--cr 5] [--y 896]
+                [--card JOB.md | --size 1080x1920] [--src-size 3840x2160]
+OUTDIR: the job's scratch folder (beon_config.scratch_dir), never a synced folder.
 LUTDIR holds base.cube (0/0/0), t200.cube (Temp +200), n20.cube (Tint +20), hm1.cube (HDR -1),
 each exported from ONE fresh clip of a scratch timeline (one ApplyGradeFromDRX per clip).
-jobs.json as in measnp.py. For each job: neutrals measured on a fixed mask (from base), a 2x2
+jobs.json, --card/--size and --src-size as in measnp.py. For each job: neutrals measured on a fixed mask (from base), a 2x2
 linear solve of Temp/Tint to the target Cb/Cr, and Global from the largest near-white surface
 that isn't clipped (windows/sky median > 990 are skipped). Writes OUTDIR/calib.json and
 OUTDIR/calib_sheet.jpg (base-grade thumbnails) - look at it before trusting any number.
-Flags shots with < 5% neutral pixels (balance unreliable: judge by eye, tell Tim)."""
+Flags shots with < 5% neutral pixels (balance unreliable: judge by eye, tell the editor)."""
 import argparse, json, os, sys
-import numpy as np
-import cv2
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import measnp
 
-ap = argparse.ArgumentParser()
+ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 ap.add_argument("jobs"); ap.add_argument("lutdir"); ap.add_argument("outdir")
 ap.add_argument("--cb", type=float, default=-5); ap.add_argument("--cr", type=float, default=5)
 ap.add_argument("--y", type=float, default=896)
+measnp.add_geometry_args(ap)
 a = ap.parse_args()
+measnp.need_numpy()
+np, cv2 = measnp.np, measnp.cv2
+tl = measnp.timeline_size(a); TW, TH = measnp.thumb_size(tl)
 os.makedirs(a.outdir, exist_ok=True)
 L = {k: os.path.join(a.lutdir, k + ".cube") for k in ("base", "t200", "n20", "hm1")}
 res, thumbs = {}, []
 for j in json.load(open(a.jobs)):
-    cr = measnp.crop_for(j.get("pan", 0), j.get("tilt", 0), j.get("zoom", 1.0))
-    F = {k: measnp.frame(j["src"], j["t"], cr, p) for k, p in L.items()}
+    cr = measnp.crop_job(j, a, tl)
+    F = {k: measnp.frame(j["src"], j["t"], cr, p, TW, TH) for k, p in L.items()}
     Yb, Cbb, Crb = measnp.ycc(F["base"])
     m = (Yb > 200) & (np.hypot(Cbb, Crb) < 40)
     weak = m.mean() < 0.05

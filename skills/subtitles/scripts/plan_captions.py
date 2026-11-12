@@ -1,11 +1,12 @@
 """Turn hand-written captions into build plans (start/end/text/per-word times) and validate them.
 
-    python3 plan_captions.py WORK_DIR
+    python3 plan_captions.py WORK_DIR    (or --card JOB_CARD.md for the job's scratch folder)
 
 Reads WORK_DIR/words.json (from export_words.py) and WORK_DIR/captions.py, which defines
 CAPTIONS = {"<timeline name prefix>": [(first transcript word index, "Caption\ntext"), ...]}.
 Writes WORK_DIR/plans.json for build_lib.py and prints anything that needs a look.
 """
+import argparse
 import difflib
 import json
 import os
@@ -13,7 +14,14 @@ import re
 import sys
 
 
-BASE = (sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/subs_work")).rstrip("/") + "/"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import subs_intake  # noqa: E402
+
+_ap = argparse.ArgumentParser(description="Plan captions: WORK/words.json + WORK/captions.py -> WORK/plans.json.")
+_ap.add_argument("work", nargs="?", help="work folder (default: from --card, else ~/subs_work)")
+_ap.add_argument("--card", help="job card: work folder from its client, shoot and concept")
+_args = _ap.parse_args()
+BASE = (_args.work or subs_intake.work_dir(_args.card)).rstrip("/") + "/"
 MAX_LINE, MAX_WORDS, MAX_FRAMES = 28, 12, 118
 IN_DUR, OUT_DUR, LAST_OUT, LEAD, MIN_SHOW, MIN_GAP = 18, 4, 0, 2, 6, 4
 # A caption start moves onto a picture cut (Tim, Simone C03, 3 Nov 2026) only when the cut is up to

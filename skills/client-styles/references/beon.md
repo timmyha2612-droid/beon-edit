@@ -1,6 +1,28 @@
+---
+slug: beon
+name: Beon Media
+who: "Beon Media's own videos: SEO shorts and long-form HERO videos"
+people:
+  - {name: Bonnie, role: "Founder & CEO"}
+  - {name: Jordan, role: SEO Manager}
+concept_types:
+  - {name: SEO short, target_length: ask}
+  - {name: HERO video (long-form with hook), target_length: ask}
+footage: {path_pattern: ask, write_protected: ask}
+resolve: {project: ask, bins: ask, timeline_naming: ask}
+delivery: {aspect: "9:16", resolution: ask, fps: ask, loudness_lufs: ask, true_peak_db: ask}
+end_card: {kind: ask, asset: ask, length_f: ask, music_tail_s: ask}
+audio: {dialogue_enhance: ask, music: ask}
+subtitles: {look: "shorts: approved C2a look (the title's built-in default); HERO hook: Kinetic", title: "Fluid Reveal Words", font: "Garet Book", reference_timeline: ask}
+grade: {template_still: default, aroll_policy: ask}
+language: en
+brand_words: ask
+open_questions: ["Brand words and end card for Beon's own videos?", "Footage location and Resolve project?", "HERO delivery resolution and fps?", "Loudness target?"]
+---
+
 # Beon Media (own content: SEO shorts, HERO videos) style profile
 
-Tags: [Tim] confirmed by Tim · [inferred] measured from his finals, not confirmed · ask = unknown.
+Tags: [Tim] or [<editor>] said or confirmed by that editor · [inferred] measured from finished edits, not confirmed · ask = unknown.
 
 ## Client and footage
 - Who: Beon Media's own videos. People: Bonnie (Founder & CEO), Jordan (SEO Manager).
@@ -9,6 +31,7 @@ Tags: [Tim] confirmed by Tim · [inferred] measured from his finals, not confirm
 
 ## Format and length
 - Shorts: 9:16. HERO: 16:9 (hook captions sized for 16:9: Size 0.06, Position (0.5, 0.2)).
+- HERO jobs: the job card Delivery line must state 16:9 with resolution and fps. Scripts take delivery from `bc.delivery`, which reads only this profile's `delivery` (9:16) and the card, so "as client" gives 9:16.
 - Length: ask per concept.
 
 ## Subtitles
@@ -25,5 +48,8 @@ Tags: [Tim] confirmed by Tim · [inferred] measured from his finals, not confirm
 ## B-roll, audio, music, ending, grade
 - ask (no Beon B-roll or grade rules learned yet).
 
-## Open questions for Tim
+## Open questions (mirrored in the front matter `open_questions`)
 - Brand words and end card for Beon's own videos.
+- Footage location and Resolve project?
+- HERO delivery resolution and fps?
+- Loudness target?

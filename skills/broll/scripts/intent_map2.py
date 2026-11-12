@@ -1,16 +1,36 @@
 """Intent map v2: image motion (keyframe optical flow) decides the move, gyro decides shake.
 Tiers: REJECT (resets/reversals, stop-start stalls, first/last 1 s, too short)
        OK (clean but secondary: steady holds/moves that aren't the clip's main move)
-       CANDIDATE (the clip's real move(s) and anything uncertain -> dense scan later)"""
-import sys, os, re, json, subprocess, numpy as np, telemetry_parser, cv2
-D = os.path.expanduser("~/mnt/Namir Mikha/[01. Content]/Videography/1. SHOOTS/2026/Shoot 16. Bishop St")
+       CANDIDATE (the clip's real move(s) and anything uncertain -> dense scan later)
+usage: intent_map2.py CLIP... --dir SHOOT [--prefix LIAM.A_FX3_]  -> JSON {clip: {dur, keyframes, segments}}
+  CLIP     stem (C0123), file name (any video extension) or path relative to --dir (A001/C0123.MP4)
+  --dir    the shoot folder (shot log "shoot.shoot_folder"); --prefix the camera's file-name prefix
+Gyro shake needs a gyro track telemetry_parser can read (Sony rtmd); other cameras get shake null."""
+import argparse, os, re, json, subprocess
+from _beon import find_clip
+ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+ap.add_argument("clips", nargs="+"); ap.add_argument("--dir"); ap.add_argument("--prefix", default="")
+A = ap.parse_args()
+import numpy as np, cv2
+try:
+    import telemetry_parser
+except ImportError:
+    telemetry_parser = None
+_paths = {}
 def path(c):
-    return f"{D}/Day 1/{c}.MP4" if c.startswith("C08") else f"{D}/Day 2/FX3 A CAM Gimbal/LIAM.A_FX3_{c}.MP4"
+    if c not in _paths:
+        _paths[c] = find_clip(A.dir, c, A.prefix)
+    return _paths[c]
 EDGE, W, H = 1.0, 192, 108
 MOVE_T = float(os.environ.get('MOVE_T', 1.2))   # px/s at 192 px width
 def gyro_shake(c):
+    if telemetry_parser is None:
+        return None
     try:
         imu = telemetry_parser.Parser(path(c)).normalized_imu()
+        if not imu or not any(s.get("gyro") for s in imu):
+            return None
+        imu = [s for s in imu if s.get("gyro")]
     except Exception:
         return None
     t = np.array([s["timestamp_ms"] for s in imu])/1000.0; g = np.array([s["gyro"] for s in imu], float)
@@ -115,5 +135,5 @@ def analyse(c):
             else: s["tier"], s["why"] = "OK", "steady hold" if not s["moving"] else "steady secondary move"
     for s in out: s["dir"] = [round(float(v),1) for v in s["dir"]]
     return {"dur": round(dur,2), "keyframes": len(ts), "segments": out}
-res = {c: analyse(c) for c in sys.argv[1:]}
+res = {c: analyse(c) for c in A.clips}
 print(json.dumps(res))

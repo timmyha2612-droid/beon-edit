@@ -9,7 +9,21 @@ Run it BEFORE placing B-roll and place exactly what it prints; open frames only 
 subject/people check of the winner (framing_sheet.py / one still).
 
 usage:
-  broll_auto.py SLOTS.json CLIP_DIR [-o plan.json] [--snippet resolve_apply.py]
+  broll_auto.py SLOTS.json CLIP_DIR [-o plan.json] [--snippet resolve_apply.py] [--card JOB_CARD.md]
+  CLIP_DIR  the shoot folder or a card folder; "clip" is a stem (C0185), a file name with any video
+            extension (C0185.mov), or a path relative to CLIP_DIR (A001/C0185.MP4). Each plan row keeps that
+            path as `src_rel`; the snippet places media pool items by it (cards restart numbering)
+  --card    delivery size and timeline fps from the job card / client profile (default 9:16 1080x1920 24p);
+            --tl-fps / --size override it
+  --no-gyroflow  Gyroflow isn't installed (also read from editor.json tools.gyroflow.installed: false):
+            no Orange flags; shaky shots get slowed, replaced or marked for the editor instead
+
+Without Footage Prep (editor.json tools.footage_prep, or the app not reachable) the slot inputs come from:
+  sel        ingest.py gyro shake windows (bestwin.py ranks them) or the whole clip minus 1 s each end
+  movement   omit it (the preset then follows the measured move) or set it from a motion card
+  stability  omit it. Never invent one: without it a locked shot is not treated as camera-still, so check
+             any locked shot this script slows for `shake` by eye (people or cars moving are not shake)
+             and force "speed": 100 when the camera didn't move.
 
 SLOTS.json: [{"slot": "B6", "clip": "C0185", "rec": 74,            # timeline frames the shot plays
               "sel_frames": [[275, 528], ...],                      # footage-prep `selects` in_frame/out_frame (preferred)
@@ -44,13 +58,16 @@ Speed (Tim, 9 Nov 2026, references/broll-rulebook.md section 2): 100% unless the
   stretch  no window of the select is long enough at 100%
   hero     `hero: true`: the slowest clean speed (a shot that should breathe)
 Floors: people talking 80%, people moving 60%, else 48%, 100 fps clips 25%.
+Sizes below assume the 9:16 1080x1920 default; with --card/--size the 9:16 window and the px scale follow
+the delivery (window = delivery aspect / source aspect of the frame width, px at the delivery width).
 
 Treatment (printed per slot):
   speed + reason + Retime (none at 100%, Nearest at 96% cadence, Optical Flow, Speed Warp Better below 48%)
   zoom peak (zoom x Dynamic Zoom) against the pixelation limits (UHD 1.25 / 1.4, 1080-high 1.0 / 1.15);
   the Gyroflow crop isn't known before the render, so check stabilised shots on a still
   static shots: a Dynamic Zoom to add (3-5%, in or out by the shot), listed by --snippet
-  gyroflow preset (Tim's presets) when the file has a gyro track (Sony rtmd), else "no gyro: list for Tim"
+  gyroflow preset (Tim's presets) when the file has a gyro track (Sony rtmd) and Gyroflow is installed,
+  else "no gyro: list for the editor" (row gyro_source "none"; non-Sony bodies always land here)
   REJECT when even the best window is still 'fix' after slowing (Gyroflow can't save reversals,
   focus pulls, walking bob): re-pick another select for that line.
 Every row carries `why` (line, move, speed, gyro, pan, dynamic_zoom): the reason record the gate and the
@@ -60,29 +77,45 @@ source range, speed (only when slowed), retime, Pan/Zoom, Orange colour and the 
 before retime), plus the reason records.
 Then run gyroflow_headless.py, then shake_check.py on a proxy render to confirm.
 """
-import argparse, json, math, pprint, subprocess, sys
-import numpy as np
-import cv2
+import argparse, json, math, os, pprint, subprocess, sys
+from _beon import add_delivery_args, delivery, find_clip, clip_stem, gyroflow_installed, footage_prep_enabled
 
+np = cv2 = None    # imported in main(), so --help works without numpy/opencv
 W, H = 384, 216
+WIN = 0.316        # 9:16 window as a share of a 16:9 frame's width (set per delivery in main)
+OUT_W = 1080       # delivery width in px (jitter and speeds are px at this width)
 
 
 def probe(path):
+    """fps, gyro (Sony rtmd track; other bodies: False), duration, height, width. Never raises on odd files."""
     out = subprocess.run(["ffprobe", "-v", "error", "-show_entries",
-                          "stream=codec_type,codec_tag_string,r_frame_rate,height:format=duration",
+                          "stream=codec_type,codec_tag_string,r_frame_rate,height,width:format=duration",
                           "-of", "json", path], capture_output=True, text=True).stdout
-    j = json.loads(out)
+    try:
+        j = json.loads(out or "{}")
+    except ValueError:
+        j = {}
     fps = 50.0
     gyro = False
-    height = 2160
+    height, width = 2160, 3840
+    vseen = False
     for s in j.get("streams", []):
-        if s.get("codec_type") == "video":
-            n, d = s["r_frame_rate"].split("/")
-            fps = float(n) / float(d)
+        if s.get("codec_type") == "video" and not vseen:
+            vseen = True
+            try:
+                n, d = s.get("r_frame_rate", "50/1").split("/")
+                fps = float(n) / float(d) or fps
+            except (ValueError, ZeroDivisionError):
+                pass
             height = int(s.get("height") or height)
+            width = int(s.get("width") or width)
         if s.get("codec_tag_string") == "rtmd":
             gyro = True
-    return fps, gyro, float(j["format"]["duration"]), height
+    try:
+        dur = float((j.get("format") or {}).get("duration"))
+    except (TypeError, ValueError):
+        raise SystemExit(f"{path}: ffprobe can't read it")
+    return fps, gyro, dur, height, width
 
 
 def decode(path, a, b):
@@ -97,7 +130,7 @@ def measure(fr, x, zoom):
     f = fr.astype(np.float32)
     win = np.hanning(W).astype(np.float32)[None, :] * np.hanning(H).astype(np.float32)[:, None]
     d = np.array([cv2.phaseCorrelate(f[i - 1], f[i], win)[0] for i in range(1, len(f))])
-    ww = 0.316 / zoom * W
+    ww = WIN / zoom * W
     x0 = int(max(0, min(W - ww, x * W - ww / 2)))
     hh = H / zoom
     y0 = int((H - hh) / 2)
@@ -113,7 +146,7 @@ def score(d, sharp, luma, s0, n_src, step, zoom, med_sharp):
     pos = np.vstack([[0, 0], np.cumsum(seg, 0)])          # source-frame positions
     t_out = np.arange(0, n_src - 1, step)
     p = np.stack([np.interp(t_out, np.arange(len(pos)), pos[:, j]) for j in range(2)], 1)
-    p = p * (1080 / (0.316 / zoom * W))                      # W-px -> output px (window = 0.316/zoom of width)
+    p = p * (OUT_W / (WIN / zoom * W))                       # W-px -> output px (window = WIN/zoom of width)
     v = np.diff(p, axis=0)
     if len(v) < 6:
         return None
@@ -161,9 +194,9 @@ def preset(m, people, movement=None):
 REASONS = {"shake", "match", "stretch", "hero", "cadence"}
 
 
-def speed_ladder(fps, people):
+def speed_ladder(fps, people, tl_fps=24.0):
     """Tim, 9 Nov 2026: 100% unless there's a reason; floors by what's in the shot."""
-    base = 96.0 if 23.5 < fps < 26 else 100.0           # 25p on a 24p timeline: 96% Nearest, every frame once
+    base = 96.0 if 23.5 < fps < 26 and abs(tl_fps - 24) < 0.5 else 100.0   # 25p on a 24p timeline: 96% Nearest
     if people == "talking":
         floor = 80.0
     elif people:
@@ -250,16 +283,45 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("slots"); ap.add_argument("clipdir")
     ap.add_argument("-o", default="broll_plan.json"); ap.add_argument("--snippet")
-    ap.add_argument("--tl-fps", type=float, default=24.0)
+    ap.add_argument("--tl-fps", type=float, help="timeline fps (default: --card delivery, else 24)")
+    add_delivery_args(ap, fps=False)
+    ap.add_argument("--no-gyroflow", action="store_true",
+                    help="Gyroflow not installed (default: editor.json tools.gyroflow.installed)")
     ap.add_argument("--why", action="store_true", help="print the best window at every speed")
     a = ap.parse_args()
+    global np, cv2, WIN, OUT_W
+    import numpy as np
+    import cv2
+    dl = delivery(a)
+    if a.tl_fps is None:
+        a.tl_fps = dl["fps"]
+    OUT_W = dl["width"]
+    has_gf = gyroflow_installed() and not a.no_gyroflow
+    fp_on = footage_prep_enabled()
+    if not has_gf:
+        print("Gyroflow not installed: no Orange flags; shaky shots get slowed (shake), replaced or marked "
+              "(plan gyro_skip) for the editor", flush=True)
     slots = json.load(open(a.slots))
     plan = []
     cache = {}
+    stems = {}                                               # stem -> first file (Sony cards restart numbering)
     for sl in slots:
         clip = sl["clip"]
-        path = f"{a.clipdir.rstrip('/')}/{clip}.MP4"
-        fps, gyro, dur, height = probe(path)
+        path = find_clip(a.clipdir, clip)
+        clip = clip_stem(clip)                               # names use the stem; the snippet matches src_rel
+        rel = os.path.relpath(path, os.path.expanduser(a.clipdir)).replace(os.sep, "/")
+        src_rel = path if rel.startswith("..") else rel      # shoot-relative path (A001/C0001.MP4)
+        other = stems.setdefault(clip.lower(), path)
+        if os.path.realpath(other) != os.path.realpath(path):
+            print(f"{sl['slot']:<8} NOTE {clip} names two files ({other}, {path}): "
+                  f"the snippet places each by its file path (src_rel), not by name", flush=True)
+        fps, gyro, dur, height, width = probe(path)
+        gyro_src = "sony-rtmd" if gyro else "none"
+        if (dl["width"], dl["height"]) == (1080, 1920) and abs(width / height - 16 / 9) < 0.01:
+            WIN = 0.316
+        else:
+            WIN = min(1.0, (dl["width"] / dl["height"]) / (width / height))
+        gyro = gyro and has_gf                               # no Gyroflow = treat as no gyro for the action
         if sl.get("sel_frames"):                             # straight from footage-prep `selects` (in_frame/out_frame)
             sels = [[a_ / fps, b_ / fps] for a_, b_ in sl["sel_frames"]]
         else:
@@ -268,7 +330,7 @@ def main():
         people = sl.get("people")
         if people is True:
             people = "moving"
-        base, floor, ladder = speed_ladder(fps, people)
+        base, floor, ladder = speed_ladder(fps, people, a.tl_fps)
         forced = sl.get("speed")
         if forced is not None:
             if sl.get("speed_reason") not in REASONS and float(forced) < base:
@@ -314,15 +376,18 @@ def main():
         best, reason = choose(best_by, base, sl, forced)
         if best is None:
             print(f"{sl['slot']:<8} {clip}  no window long enough in the selects", flush=True)
-            plan.append(dict(slot=sl["slot"], clip=clip, action="REPICK", why={"speed": "selects too short"}))
+            plan.append(dict(slot=sl["slot"], clip=clip, src_rel=src_rel, action="REPICK", why={"speed": "selects too short"}))
             continue
         cost, spd, t0, n_src, m = best
         sf = int(round(t0 * fps))
         app_len = int(math.ceil(sl["rec"] * fps / a.tl_fps))  # append real-time length, then SetSpeed
         still = gyro_still(sl)                               # flow motion = the subject, not the camera
-        if sl.get("movement") in ("locked", "steady") and sl.get("stability") is None and reason == "shake":
-            print(f"{sl['slot']:<8} WARNING slowed for shake on a {sl['movement']} shot with no `stability`: "
-                  f"pass Footage Prep's metrics.stability (>= {STILL_STAB} = subject motion, plays at 100%)", flush=True)
+        if sl.get("stability") is None and reason == "shake":
+            print(f"{sl['slot']:<8} WARNING slowed for shake with no `stability` ({sl.get('movement') or 'movement unset'}): "
+                  + (f"pass Footage Prep's metrics.stability (>= {STILL_STAB} on a locked/steady shot = subject "
+                     f"motion, plays at 100%)" if fp_on else
+                     "check it by eye; if the camera didn't move (only people or cars), force \"speed\": 100"),
+                  flush=True)
         bad = []
         if m["rev"] > 0.15 and not still: bad.append("reversal")
         if m["sharp"] < 0.6: bad.append("soft")
@@ -342,7 +407,8 @@ def main():
         elif gyro:
             action = "gyroflow" + ("" if t != "fix" else " (strong)")
         else:
-            action = "use" if t == "pass" else "no gyro: list for Tim"
+            action = "use" if t == "pass" else ("no gyro: list for the editor" if has_gf else
+                                                "no Gyroflow: slow (shake), replace or mark for the editor")
         gf = preset(m, people, sl.get("movement")) if gyro and not action.startswith("REJECT") else None
         retime = None if spd >= 99.5 else ("nearest" if reason == "cadence" else "optical_flow")
         why = dict(line=sl.get("line", ""),
@@ -354,18 +420,19 @@ def main():
                    speed_reason=reason,
                    gyro=(f"preset {gf['smoothness']}" + (" + horizon lock" if gf.get("horizon") else " no lock")
                          + f" ({sl.get('movement') or 'measured move'})") if gf else
-                        ("no gyro track: list for Tim" if not gyro else "rejected shot"),
+                        ("rejected shot" if gyro else "no gyro track: list for the editor" if gyro_src == "none"
+                         else "Gyroflow not installed: slowed, replaced or marked by the editor"),
                    pan=f"x {x:.2f} centres {sl.get('subject') or 'the subject (name it in the slot)'}",
                    zoom=f"peak {peak:.2f}x on {height}p source: {ztier}"
                         + ("" if not gf else " (plus the Gyroflow crop: check a still)"))
         if dz:
             why["dynamic_zoom"] = (f"static shot: zoom {dz['dir']} {dz['amount'] * 100:.0f}%"
                                    + (" (pick in or out by the shot)" if dz["dir"] == "decide" else ""))
-        row = dict(slot=sl["slot"], clip=clip, at=sl.get("at"), src_in=round(t0, 2), src_out=round(t0 + n_src / fps, 2),
+        row = dict(slot=sl["slot"], clip=clip, src_rel=src_rel, at=sl.get("at"), src_in=round(t0, 2), src_out=round(t0 + n_src / fps, 2),
                    sf=sf, ef=sf + app_len, speed=spd, retime=retime, rec=sl["rec"], x=x, zoom=zoom, fps=fps,
                    people=people or False, jit=round(m["jit"], 2), tier=t, v=round(m["v"], 1), cv=round(m["cv"], 2),
                    rev=round(m["rev"], 2), sharp=round(m["sharp"], 2), luma=round(m["luma"], 1),
-                   gyro=gyro, action=action, gyroflow=gf, dynamic_zoom=dz, zoom_peak=round(peak, 3),
+                   gyro=gyro, gyro_source=gyro_src, still=still, action=action, gyroflow=gf, dynamic_zoom=dz, zoom_peak=round(peak, 3),
                    zoom_tier=ztier, why=why)
         plan.append(row)
         print(f"{row['slot']:<8} {clip} {row['src_in']:6.2f}-{row['src_out']:6.2f}s @{spd:g}% ({reason})  "
@@ -375,7 +442,7 @@ def main():
               flush=True)
     json.dump(plan, open(a.o, "w"), indent=1)
     if a.snippet:
-        write_snippet(plan, a.snippet)
+        write_snippet(plan, a.snippet, dl["width"])
 
 
 SNIP = '''# paste into run_script. Needs: tl = current timeline, rows below, clips from the shoot bin.
@@ -383,17 +450,34 @@ SNIP = '''# paste into run_script. Needs: tl = current timeline, rows below, cli
 import math
 mp = project.GetMediaPool(); tl = project.GetCurrentTimeline()
 BIN = None  # set: the shoot folder object (assert '/<shoot>/' in File Path)
+PAN_W = %d  # delivery width (job card Delivery / client profile)
 ROWS = %s
-clips = {c.GetName().rsplit('.', 1)[0]: c for c in BIN.GetClipList()}
+ITEMS = BIN.GetClipList()
+
+def item_for(r):
+    # by file path first: two cards can hold the same stem (A001/C0001, A002/C0001)
+    rel = r.get('src_rel') or ''
+    if rel:
+        hits = [c for c in ITEMS if (lambda fp: fp == rel or fp.endswith('/' + rel))(
+                c.GetClipProperty('File Path') or '')]
+        if len(hits) == 1:
+            return hits[0]
+        if len(hits) > 1:
+            raise Exception('%%s: %%d media pool items match %%s' %% (r['slot'], len(hits), rel))
+    hits = [c for c in ITEMS if c.GetName().rsplit('.', 1)[0] == r['clip']]
+    if len(hits) != 1:
+        raise Exception('%%s: %%d media pool items named %%s (need the file path)' %% (r['slot'], len(hits), r['clip']))
+    return hits[0]
+
 out = []
 for r in ROWS:
     if r['action'].startswith(('REJECT', 'REPICK')):
         out.append((r['slot'], 'skipped', r['action'])); continue
-    it = mp.AppendToTimeline([{'mediaPoolItem': clips[r['clip']], 'startFrame': r['sf'], 'endFrame': r['ef'],
+    it = mp.AppendToTimeline([{'mediaPoolItem': item_for(r), 'startFrame': r['sf'], 'endFrame': r['ef'],
                                'recordFrame': tl.GetStartFrame() + r['at'], 'trackIndex': 2, 'mediaType': 1}])[0]
     it.SetName('%%s %%s' %% (r['slot'], r['clip'][1:]))
     z = r['zoom']; it.SetProperty('ZoomX', z); it.SetProperty('ZoomY', z)
-    it.SetProperty('Pan', (0.5 - r['x']) * 1080 * z)   # 9:16 fit-space; CONFIRM with one still per timeline
+    it.SetProperty('Pan', (0.5 - r['x']) * PAN_W * z)  # fit-space (delivery width); CONFIRM with one still per timeline
     if r['gyroflow']:
         it.AddMarker(0, 'Sand', 'gyroflow', 'auto preset', 1, json.dumps({'gyroflow': r['gyroflow']}))
         it.SetClipColor('Orange')
@@ -409,9 +493,13 @@ result = out
 '''
 
 
-def write_snippet(plan, path):
+def write_snippet(plan, path, pan_w=1080):
     # a Python literal, not JSON text: reason strings may contain words like "true" or "null"
-    txt = "import json\n" + SNIP % pprint.pformat(plan, width=120, sort_dicts=False)
+    txt = "import json\n" + SNIP % (pan_w, pprint.pformat(plan, width=120, sort_dicts=False))
+    nogf = [r["slot"] for r in plan if not r.get("gyroflow") and not str(r.get("action", "")).startswith(("REJECT", "REPICK"))]
+    if nogf:
+        txt = (f"# broll-nogyro: {', '.join(nogf)} have no Gyroflow flag (no gyro track, or Gyroflow not installed); "
+               "listed for the editor\n") + txt
     open(path, "w").write(txt)
     print(f"snippet -> {path}  (set BIN; rows need 'at' = timeline frame offset, from the slot's \"at\")")
     dz = [r for r in plan if r.get("dynamic_zoom")]

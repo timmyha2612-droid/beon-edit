@@ -1,7 +1,7 @@
 """Read-only: list the subtitle / title looks already used on the project's other timelines.
 
-Subtitles Step 0, look-up order step 2 (Tim, 9 Nov 2026): when the client profile doesn't give the
-caption look, see what Tim used on other timelines of the same project, then confirm it with him.
+Subtitles Step 0, look-up order step 3 (Tim, 9 Nov 2026): when the client profile doesn't give the
+caption look, see what the editor used on other timelines of the same project, then confirm it with them.
 
 Run inside Resolve (run_script_unsafe), with `resolve` and `project` injected:
     ns = {"resolve": resolve, "project": project, "__name__": "lib"}
@@ -101,8 +101,9 @@ STYLE_KEYS = ("Font", "Style", "Red", "Green", "Blue", "Alpha", "Size", "Trackin
 
 
 def save_style(timeline_name, item_name, work):
-    """After Tim confirms a look found by scan(): copy that Fluid Reveal Words title's full style into
-    <work>/style.json (the file build_lib and Auto Subtitles apply). Read-only on the project."""
+    """After the editor confirms a look found by scan(): copy that Fluid Reveal Words title's full style into
+    <work>/style.json (the file build_lib and Auto Subtitles apply; a cache, the job card Subtitles line is
+    the record). Read-only on the project."""
     for i in range(1, project.GetTimelineCount() + 1):
         tl = project.GetTimelineByIndex(i)
         if tl.GetName() != timeline_name:

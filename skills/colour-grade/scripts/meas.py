@@ -1,4 +1,6 @@
-
+# LEGACY, kept for reference only. Do not run: it measured inside Resolve's Python, which made
+# Resolve lag (colour-grade "Keep Resolve light"). Use measnp.py outside Resolve instead.
+# Its /tmp/claude_drx paths and 3840x2160 / 1080x1920 sizes are the old hardcoded ones.
 import subprocess, struct, math, os, array
 FF="/opt/homebrew/bin/ffmpeg"
 W0,H0=180,320
