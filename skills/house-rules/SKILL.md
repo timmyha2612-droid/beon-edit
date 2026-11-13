@@ -118,6 +118,16 @@ session copy exists and its required lines are filled; reads are never blocked.
 - Any stage skill loaded without a job card: stop and run this section first, even if the request named
   the stage directly ("add B-roll to C3").
 
+## Client context in everything you make [Tim, 13 Nov 2026]
+
+Ground rule: whatever the job, you are working in one client's project, so everything you make follows that
+client's profile (`client-styles/references/<slug>.md`), not Beon's defaults or another client's look. Before
+making any on-screen text (timers, counters, cards, titles, supers, captions), read the profile's
+`subtitles`, `end_card` and brand rules and match its font, size, colour and position, or the closest existing
+text in that client's timelines. Never reach for Beon's default caption font or a font from another client.
+A quick one-off ask ("quickly add a countdown") is no exception. If the profile says nothing about that kind
+of text, copy the client's nearest existing text and say so in the report.
+
 ## Resolve etiquette
 
 - Work in Resolve freely during a job, but the moment the editor says they need it (a quick revision
